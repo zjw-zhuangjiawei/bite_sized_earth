@@ -1,0 +1,24 @@
+[package]
+name = "bite_sized_earth"
+version = "0.1.0"
+authors = ["Zhuang Jiawei <zjw@stu.scau.edu.cn>"]
+edition = "2024"
+
+
+[workspace]
+resolver = "3"
+members = ["crates/bse_core", "crates/bse_logic", "crates/bse_render"]
+
+[workspace.dependencies]
+bevy = { version = "0.18" }
+bevy_ecs = { version = "0.18" }
+bevy_egui = { version = "0.39" }
+bse_core = { path = "crates/bse_core" }
+bse_logic = { path = "crates/bse_logic" }
+bse_render = { path = "crates/bse_render" }
+
+[dependencies]
+bevy = { workspace = true }
+bse_core = { workspace = true }
+bse_logic = { workspace = true }
+bse_render = { workspace = true }

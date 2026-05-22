@@ -1,0 +1,9 @@
+[package]
+name = "bse_logic"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy = { workspace = true }
+bse_core = { workspace = true }
+pathfinding = "4.15"

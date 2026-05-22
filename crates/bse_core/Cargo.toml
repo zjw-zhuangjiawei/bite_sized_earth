@@ -1,0 +1,8 @@
+[package]
+name = "bse_core"
+version = "0.1.0"
+authors = ["Zhuang Jiawei <zjw@stu.scau.edu.cn>"]
+edition = "2024"
+
+[dependencies]
+bevy_ecs = { workspace = true }

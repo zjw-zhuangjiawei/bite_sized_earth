@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bevy_egui::{EguiContexts, egui};
+use bevy_egui::{egui, EguiContexts};
 use bse_sim::components::GridDirection;
 use bse_sim::messages::{
   DebugSpawnCustomerRequest, DebugSpawnStaffRequest, RequestDemolishAppliance, RequestPlaceChair,
@@ -154,15 +154,25 @@ pub fn render_egui_console(
 
       let anchor = (anchor_x, anchor_z);
       placement_section(
-        ui, anchor, direction,
-        &mut table_writer, &mut chair_writer, &mut register_writer, &mut stove_writer,
+        ui,
+        anchor,
+        direction,
+        &mut table_writer,
+        &mut chair_writer,
+        &mut register_writer,
+        &mut stove_writer,
       );
       ui.add_space(8.0);
 
       demolish_section(ui, anchor, &mut demolish_writer);
       ui.add_space(8.0);
 
-      spawn_section(ui, anchor, &mut spawn_staff_writer, &mut spawn_customer_writer);
+      spawn_section(
+        ui,
+        anchor,
+        &mut spawn_staff_writer,
+        &mut spawn_customer_writer,
+      );
     });
 
   // sync back

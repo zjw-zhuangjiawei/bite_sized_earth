@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use bse_sim::SimPlugin;
 use bse_shell::ShellPlugin;
+use bse_sim::SimPlugin;
 
 fn main() {
   App::new()

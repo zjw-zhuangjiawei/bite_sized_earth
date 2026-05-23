@@ -86,10 +86,10 @@ pub fn render_chairs(
       GridDirection::PosX => std::f32::consts::FRAC_PI_2,
     };
 
-    commands.entity(entity).insert((
-      Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
-        .with_rotation(Quat::from_rotation_y(rotation_y)),
-    ));
+    commands
+      .entity(entity)
+      .insert((Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
+        .with_rotation(Quat::from_rotation_y(rotation_y)),));
 
     commands.entity(entity).with_children(|parent| {
       // Lower step (wider base)
@@ -120,7 +120,11 @@ pub fn render_registers(
   mut materials: ResMut<Assets<StandardMaterial>>,
   query: Query<
     (Entity, &GridPosition, &ApplianceGeometry),
-    (Added<ApplianceGeometry>, With<RegisterState>, Without<Mesh3d>),
+    (
+      Added<ApplianceGeometry>,
+      With<RegisterState>,
+      Without<Mesh3d>,
+    ),
   >,
 ) {
   for (entity, pos, geo) in query.iter() {
@@ -205,14 +209,12 @@ pub fn render_new_customers(
 /// Reads logic-layer position ([`GridPosition`] + [`MovementProgress`]) and
 /// writes the visual [`Transform`].  Keeps visual interpolation out of the
 /// logic crate.
-pub fn sync_agent_transform(
-  mut query: Query<(&GridPosition, &MovementProgress, &mut Transform)>,
-) {
+pub fn sync_agent_transform(mut query: Query<(&GridPosition, &MovementProgress, &mut Transform)>) {
   for (_grid_pos, movement, mut transform) in query.iter_mut() {
-    let fx = movement.from.0 as f32
-      + (movement.to.0 as f32 - movement.from.0 as f32) * movement.progress;
-    let fz = movement.from.1 as f32
-      + (movement.to.1 as f32 - movement.from.1 as f32) * movement.progress;
+    let fx =
+      movement.from.0 as f32 + (movement.to.0 as f32 - movement.from.0 as f32) * movement.progress;
+    let fz =
+      movement.from.1 as f32 + (movement.to.1 as f32 - movement.from.1 as f32) * movement.progress;
     transform.translation.x = fx;
     transform.translation.z = fz;
   }

@@ -2,8 +2,8 @@ use bevy::prelude::*;
 use smallvec::SmallVec;
 
 use crate::components::{
-  ApplianceGeometry, GridDirection, GridFootprint, GridPosition, InteractionPoints,
-  InteractionRule, get_footprint,
+  get_footprint, ApplianceGeometry, GridDirection, GridFootprint, GridPosition, InteractionPoints,
+  InteractionRule,
 };
 use crate::messages::GridChangedMessage;
 use crate::world::{GridLayer, GridLayers};

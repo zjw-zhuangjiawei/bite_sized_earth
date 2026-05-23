@@ -32,10 +32,7 @@ impl Plugin for ShellPlugin {
 
     app.add_systems(
       Startup,
-      (
-        environment::setup_checkerboard,
-        environment::setup_lighting,
-      ),
+      (environment::setup_checkerboard, environment::setup_lighting),
     );
     app.add_systems(
       Update,
@@ -58,9 +55,6 @@ impl Plugin for ShellPlugin {
     );
 
     #[cfg(feature = "dev")]
-    app.add_systems(
-      EguiPrimaryContextPass,
-      dev_console::render_egui_console,
-    );
+    app.add_systems(EguiPrimaryContextPass, dev_console::render_egui_console);
   }
 }

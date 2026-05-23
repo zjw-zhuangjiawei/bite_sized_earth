@@ -12,8 +12,8 @@ pub const EXIT_POSITION: (i32, i32) = (0, 0);
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GridPosition {
-    pub x: i32,
-    pub z: i32,
+  pub x: i32,
+  pub z: i32,
 }
 
 /// Which layer this entity belongs to (placed by construction handlers).
@@ -23,7 +23,7 @@ pub use crate::world::GridLayer;
 /// demolish time and by the interaction-point refresh system.
 #[derive(Component, Debug, Clone)]
 pub struct GridFootprint {
-    pub cells: SmallVec<[(i32, i32); 8]>,
+  pub cells: SmallVec<[(i32, i32); 8]>,
 }
 
 // =========================================================================
@@ -32,15 +32,15 @@ pub struct GridFootprint {
 
 #[derive(Component, Default)]
 pub struct PathQueue {
-    pub path: VecDeque<(i32, i32)>,
+  pub path: VecDeque<(i32, i32)>,
 }
 
 #[derive(Component)]
 pub struct MovementProgress {
-    pub from: (i32, i32),
-    pub to: (i32, i32),
-    pub progress: f32,
-    pub speed: f32,
+  pub from: (i32, i32),
+  pub to: (i32, i32),
+  pub progress: f32,
+  pub speed: f32,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
@@ -54,19 +54,19 @@ pub struct NavigationComplete;
 /// Written once at spawn, never changed.
 #[derive(Component, Debug, Clone)]
 pub enum InteractionRule {
-    /// Cells in front of the appliance along its facing direction.
-    Front,
-    /// All cells within `range` Manhattan distance of the footprint.
-    AllAdjacent { range: u32 },
-    /// The entity's own footprint cells (e.g. chair — agent sits on the chair).
-    OnSite,
+  /// Cells in front of the appliance along its facing direction.
+  Front,
+  /// All cells within `range` Manhattan distance of the footprint.
+  AllAdjacent { range: u32 },
+  /// The entity's own footprint cells (e.g. chair — agent sits on the chair).
+  OnSite,
 }
 
 /// Mutable set of currently-available interaction cells.  Computed at spawn
 /// and refreshed on-demand when a neighbour changes.
 #[derive(Component, Debug, Clone)]
 pub struct InteractionPoints {
-    pub cells: SmallVec<[(i32, i32); 8]>,
+  pub cells: SmallVec<[(i32, i32); 8]>,
 }
 
 // =========================================================================
@@ -75,35 +75,35 @@ pub struct InteractionPoints {
 
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct Customer {
-    pub state: CustomerState,
+  pub state: CustomerState,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum CustomerState {
-    Entering,
-    WalkingToSeat,
-    WaitingForFood,
-    Eating(f32),
-    Leaving,
+  Entering,
+  WalkingToSeat,
+  WaitingForFood,
+  Eating(f32),
+  Leaving,
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq)]
 pub struct Staff {
-    pub state: StaffState,
+  pub state: StaffState,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Default)]
 pub enum StaffState {
-    #[default]
-    Idle,
-    WalkingToKitchen,
-    Cooking(f32),
-    Delivering,
+  #[default]
+  Idle,
+  WalkingToKitchen,
+  Cooking(f32),
+  Delivering,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct StaffTarget {
-    pub target_table: Entity,
+  pub target_table: Entity,
 }
 
 // =========================================================================
@@ -112,37 +112,37 @@ pub struct StaffTarget {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GridDirection {
-    PosZ,
-    NegX,
-    NegZ,
-    PosX,
+  PosZ,
+  NegX,
+  NegZ,
+  PosX,
 }
 
 impl GridDirection {
-    pub fn rotate_cw(self) -> Self {
-        match self {
-            Self::PosZ => Self::NegX,
-            Self::NegX => Self::NegZ,
-            Self::NegZ => Self::PosX,
-            Self::PosX => Self::PosZ,
-        }
+  pub fn rotate_cw(self) -> Self {
+    match self {
+      Self::PosZ => Self::NegX,
+      Self::NegX => Self::NegZ,
+      Self::NegZ => Self::PosX,
+      Self::PosX => Self::PosZ,
     }
+  }
 
-    pub fn facing_offset(self) -> (i32, i32) {
-        match self {
-            Self::PosZ => (0, 1),
-            Self::NegZ => (0, -1),
-            Self::PosX => (1, 0),
-            Self::NegX => (-1, 0),
-        }
+  pub fn facing_offset(self) -> (i32, i32) {
+    match self {
+      Self::PosZ => (0, 1),
+      Self::NegZ => (0, -1),
+      Self::PosX => (1, 0),
+      Self::NegX => (-1, 0),
     }
+  }
 }
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct ApplianceGeometry {
-    pub right: i32,
-    pub forward: i32,
-    pub direction: GridDirection,
+  pub right: i32,
+  pub forward: i32,
+  pub direction: GridDirection,
 }
 
 /// Compute all grid cells occupied by an appliance.
@@ -152,21 +152,21 @@ pub struct ApplianceGeometry {
 /// right (perpendicular to facing) and `forward` cells along the facing
 /// direction.
 pub fn get_footprint(geometry: &ApplianceGeometry, anchor: (i32, i32)) -> Vec<(i32, i32)> {
-    let (sx, sz) = match geometry.direction {
-        GridDirection::PosZ | GridDirection::NegZ => (geometry.right, geometry.forward),
-        GridDirection::PosX | GridDirection::NegX => (geometry.forward, geometry.right),
-    };
-    let (ax, az) = match geometry.direction {
-        GridDirection::PosZ | GridDirection::NegX => (anchor.0, anchor.1),
-        GridDirection::NegZ | GridDirection::PosX => (anchor.0 - sx + 1, anchor.1 - sz + 1),
-    };
-    let mut cells = Vec::with_capacity((sx * sz) as usize);
-    for dx in 0..sx {
-        for dz in 0..sz {
-            cells.push((ax + dx, az + dz));
-        }
+  let (sx, sz) = match geometry.direction {
+    GridDirection::PosZ | GridDirection::NegZ => (geometry.right, geometry.forward),
+    GridDirection::PosX | GridDirection::NegX => (geometry.forward, geometry.right),
+  };
+  let (ax, az) = match geometry.direction {
+    GridDirection::PosZ | GridDirection::NegX => (anchor.0, anchor.1),
+    GridDirection::NegZ | GridDirection::PosX => (anchor.0 - sx + 1, anchor.1 - sz + 1),
+  };
+  let mut cells = Vec::with_capacity((sx * sz) as usize);
+  for dx in 0..sx {
+    for dz in 0..sz {
+      cells.push((ax + dx, az + dz));
     }
-    cells
+  }
+  cells
 }
 
 // =========================================================================
@@ -175,42 +175,42 @@ pub fn get_footprint(geometry: &ApplianceGeometry, anchor: (i32, i32)) -> Vec<(i
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
 pub enum TableState {
-    #[default]
-    Empty,
-    Occupied,
-    Ordered,
-    Served,
-    Dirty,
+  #[default]
+  Empty,
+  Occupied,
+  Ordered,
+  Served,
+  Dirty,
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
 pub enum ChairState {
-    #[default]
-    Available,
-    Reserved,
-    Occupied,
+  #[default]
+  Available,
+  Reserved,
+  Occupied,
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
 pub enum RegisterState {
-    #[default]
-    Idle,
-    Checkout,
+  #[default]
+  Idle,
+  Checkout,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct BelongsToTable {
-    pub table: Entity,
+  pub table: Entity,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SeatedAt {
-    pub chair: Entity,
+  pub chair: Entity,
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]
 pub enum StoveState {
-    #[default]
-    Idle,
-    Cooking(f32),
+  #[default]
+  Idle,
+  Cooking(f32),
 }

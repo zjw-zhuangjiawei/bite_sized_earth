@@ -5,4 +5,4 @@ authors = ["Zhuang Jiawei <zjw@stu.scau.edu.cn>"]
 edition = "2024"
 
 [dependencies]
-bevy_ecs = { workspace = true }
+bevy = { workspace = true }

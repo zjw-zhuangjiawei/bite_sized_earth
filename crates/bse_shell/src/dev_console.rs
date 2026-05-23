@@ -1,16 +1,16 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui};
-use bse_core::components::GridRotation;
+use bse_core::components::GridDirection;
 use bse_core::messages::{
   DebugSpawnCustomerRequest, DebugSpawnStaffRequest, RequestDemolishAppliance, RequestPlaceChair,
-  RequestPlaceRegister, RequestPlaceTable,
+  RequestPlaceRegister, RequestPlaceStove, RequestPlaceTable,
 };
 
 #[derive(Resource)]
 pub struct DevConsoleState {
   pub anchor_x: i32,
   pub anchor_z: i32,
-  pub rotation: GridRotation,
+  pub direction: GridDirection,
 }
 
 impl Default for DevConsoleState {
@@ -18,7 +18,7 @@ impl Default for DevConsoleState {
     Self {
       anchor_x: 16,
       anchor_z: 16,
-      rotation: GridRotation::North,
+      direction: GridDirection::PosZ,
     }
   }
 }
@@ -37,15 +37,15 @@ fn anchor_section(ui: &mut egui::Ui, anchor_x: &mut i32, anchor_z: &mut i32) {
   });
 }
 
-fn rotation_section(ui: &mut egui::Ui, rotation: &mut GridRotation) {
+fn direction_section(ui: &mut egui::Ui, direction: &mut GridDirection) {
   ui.group(|ui| {
-    ui.label("Rotation");
+    ui.label("Direction");
     ui.separator();
     ui.horizontal(|ui| {
-      ui.selectable_value(rotation, GridRotation::North, "N");
-      ui.selectable_value(rotation, GridRotation::East, "E");
-      ui.selectable_value(rotation, GridRotation::South, "S");
-      ui.selectable_value(rotation, GridRotation::West, "W");
+      ui.selectable_value(direction, GridDirection::PosZ, "+Z");
+      ui.selectable_value(direction, GridDirection::NegX, "-X");
+      ui.selectable_value(direction, GridDirection::NegZ, "-Z");
+      ui.selectable_value(direction, GridDirection::PosX, "+X");
     });
   });
 }
@@ -53,23 +53,27 @@ fn rotation_section(ui: &mut egui::Ui, rotation: &mut GridRotation) {
 fn placement_section(
   ui: &mut egui::Ui,
   anchor: (i32, i32),
-  rotation: GridRotation,
+  direction: GridDirection,
   table_writer: &mut MessageWriter<RequestPlaceTable>,
   chair_writer: &mut MessageWriter<RequestPlaceChair>,
   register_writer: &mut MessageWriter<RequestPlaceRegister>,
+  stove_writer: &mut MessageWriter<RequestPlaceStove>,
 ) {
   ui.group(|ui| {
     ui.label("Place Appliance");
     ui.separator();
 
     if ui.button("Table").clicked() {
-      table_writer.write(RequestPlaceTable { anchor, rotation });
+      table_writer.write(RequestPlaceTable { anchor, direction });
     }
     if ui.button("Chair").clicked() {
-      chair_writer.write(RequestPlaceChair { anchor, rotation });
+      chair_writer.write(RequestPlaceChair { anchor, direction });
     }
     if ui.button("Register").clicked() {
-      register_writer.write(RequestPlaceRegister { anchor, rotation });
+      register_writer.write(RequestPlaceRegister { anchor, direction });
+    }
+    if ui.button("Stove").clicked() {
+      stove_writer.write(RequestPlaceStove { anchor, direction });
     }
   });
 }
@@ -125,6 +129,7 @@ pub fn render_egui_console(
   mut table_writer: MessageWriter<RequestPlaceTable>,
   mut chair_writer: MessageWriter<RequestPlaceChair>,
   mut register_writer: MessageWriter<RequestPlaceRegister>,
+  mut stove_writer: MessageWriter<RequestPlaceStove>,
   mut demolish_writer: MessageWriter<RequestDemolishAppliance>,
   mut spawn_staff_writer: MessageWriter<DebugSpawnStaffRequest>,
   mut spawn_customer_writer: MessageWriter<DebugSpawnCustomerRequest>,
@@ -132,7 +137,7 @@ pub fn render_egui_console(
   // copy out of ResMut to avoid borrow conflicts through DerefMut
   let mut anchor_x = state.anchor_x;
   let mut anchor_z = state.anchor_z;
-  let mut rotation = state.rotation;
+  let mut direction = state.direction;
 
   let Ok(ctx) = contexts.ctx_mut() else {
     return;
@@ -144,13 +149,13 @@ pub fn render_egui_console(
       anchor_section(ui, &mut anchor_x, &mut anchor_z);
       ui.add_space(8.0);
 
-      rotation_section(ui, &mut rotation);
+      direction_section(ui, &mut direction);
       ui.add_space(8.0);
 
       let anchor = (anchor_x, anchor_z);
       placement_section(
-        ui, anchor, rotation,
-        &mut table_writer, &mut chair_writer, &mut register_writer,
+        ui, anchor, direction,
+        &mut table_writer, &mut chair_writer, &mut register_writer, &mut stove_writer,
       );
       ui.add_space(8.0);
 
@@ -163,7 +168,7 @@ pub fn render_egui_console(
   // sync back
   state.anchor_x = anchor_x;
   state.anchor_z = anchor_z;
-  state.rotation = rotation;
+  state.direction = direction;
 }
 
 fn coord_row(ui: &mut egui::Ui, label: &str, value: &mut i32) {

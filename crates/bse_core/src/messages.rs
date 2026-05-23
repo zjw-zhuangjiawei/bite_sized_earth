@@ -1,6 +1,6 @@
-use bevy_ecs::message::Message;
+use bevy::prelude::*;
 
-use crate::components::GridRotation;
+use crate::components::GridDirection;
 
 #[derive(Message, Debug)]
 pub struct DebugSpawnStaffRequest {
@@ -19,22 +19,38 @@ pub struct DebugSpawnCustomerRequest {
 #[derive(Message, Debug)]
 pub struct RequestPlaceTable {
   pub anchor: (i32, i32),
-  pub rotation: GridRotation,
+  pub direction: GridDirection,
 }
 
 #[derive(Message, Debug)]
 pub struct RequestPlaceChair {
   pub anchor: (i32, i32),
-  pub rotation: GridRotation,
+  pub direction: GridDirection,
 }
 
 #[derive(Message, Debug)]
 pub struct RequestPlaceRegister {
   pub anchor: (i32, i32),
-  pub rotation: GridRotation,
+  pub direction: GridDirection,
 }
 
 #[derive(Message, Debug)]
 pub struct RequestDemolishAppliance {
   pub click: (i32, i32),
+}
+
+#[derive(Message, Debug)]
+pub struct RequestPlaceStove {
+  pub anchor: (i32, i32),
+  pub direction: GridDirection,
+}
+
+pub fn register_all(app: &mut App) {
+  app.add_message::<DebugSpawnStaffRequest>();
+  app.add_message::<DebugSpawnCustomerRequest>();
+  app.add_message::<RequestPlaceTable>();
+  app.add_message::<RequestPlaceChair>();
+  app.add_message::<RequestPlaceRegister>();
+  app.add_message::<RequestDemolishAppliance>();
+  app.add_message::<RequestPlaceStove>();
 }

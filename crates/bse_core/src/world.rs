@@ -1,4 +1,4 @@
-use bevy_ecs::prelude::Resource;
+use bevy::prelude::*;
 
 #[derive(Clone, Copy, PartialEq, Eq, Default, Debug)]
 pub enum GridOccupancy {

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bse_core::components::{GridPosition, MovementProgress, PathQueue};
+use bse_core::components::{ApplianceGeometry, GridPosition, MovementProgress, PathQueue};
 use crate::dev_console::DevConsoleState;
 
 /// 在 DevConsoleState 的 anchor 位置画一个半透明绿色方块（XZ 平面）
@@ -50,4 +50,31 @@ pub fn draw_agent_path_preview_system(
             }
         }
     }
+}
+
+/// Red (X) and blue (Z) axis arrows at the origin.
+pub fn draw_world_axes(mut gizmos: Gizmos) {
+  gizmos.arrow(
+    Vec3::new(0.0, 0.1, 0.0),
+    Vec3::new(2.0, 0.1, 0.0),
+    Color::srgba(1.0, 0.0, 0.0, 0.8),
+  );
+  gizmos.arrow(
+    Vec3::new(0.0, 0.1, 0.0),
+    Vec3::new(0.0, 0.1, 2.0),
+    Color::srgba(0.0, 0.0, 1.0, 0.8),
+  );
+}
+
+/// Small cyan arrows showing each appliance's facing direction.
+pub fn draw_appliance_direction_gizmos(
+  query: Query<(&GridPosition, &ApplianceGeometry)>,
+  mut gizmos: Gizmos,
+) {
+  for (pos, geo) in query.iter() {
+    let (dx, dz) = geo.direction.facing_offset();
+    let origin = Vec3::new(pos.x as f32, 0.2, pos.z as f32);
+    let tip = Vec3::new((pos.x + dx) as f32, 0.2, (pos.z + dz) as f32);
+    gizmos.arrow(origin, tip, Color::srgba(0.0, 1.0, 1.0, 0.5));
+  }
 }

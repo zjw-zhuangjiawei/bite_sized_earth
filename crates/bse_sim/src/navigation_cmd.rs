@@ -1,8 +1,8 @@
 use std::collections::VecDeque;
 
 use bevy::prelude::*;
-use bse_core::components::{GridPosition, MovementProgress, PathQueue};
-use bse_core::world::WorldGridMap;
+use crate::components::{GridPosition, MovementProgress, PathQueue};
+use crate::world::WorldGridMap;
 
 use crate::pathfinding::compute_agent_path;
 

@@ -7,16 +7,17 @@ edition = "2024"
 
 [workspace]
 resolver = "3"
-members = ["crates/bse_core", "crates/bse_logic", "crates/bse_shell"]
+members = ["crates/bse_sim", "crates/bse_shell"]
 
 [workspace.dependencies]
 bevy = { version = "0.18" }
-bse_core = { path = "crates/bse_core" }
-bse_logic = { path = "crates/bse_logic" }
+bse_sim = { path = "crates/bse_sim" }
 bse_shell = { path = "crates/bse_shell" }
+
+[features]
+dev = ["bse_shell/dev"]
 
 [dependencies]
 bevy = { workspace = true }
-bse_core = { workspace = true }
-bse_logic = { workspace = true }
+bse_sim = { workspace = true }
 bse_shell = { workspace = true }

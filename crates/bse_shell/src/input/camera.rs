@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use bevy::camera::ScalingMode;
 use bevy_enhanced_input::prelude::*;
-use bse_core::components::MainCamera;
+/// Marker component for the main isometric camera entity.
+#[derive(Component)]
+pub struct MainCamera;
 
 // ---------------------------------------------------------------------------
 // Actions

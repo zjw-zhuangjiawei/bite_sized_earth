@@ -1,13 +1,20 @@
+#[cfg(feature = "dev")]
 pub mod debug_gizmos;
+#[cfg(feature = "dev")]
 pub mod dev_console;
 pub mod environment;
 pub mod input;
 pub mod reactive;
 
 use bevy::prelude::*;
-use bevy_egui::{EguiPlugin, EguiPrimaryContextPass};
+use bevy_egui::EguiPlugin;
 use bevy_enhanced_input::EnhancedInputPlugin;
+
+#[cfg(feature = "dev")]
+use bevy_egui::EguiPrimaryContextPass;
+#[cfg(feature = "dev")]
 use dev_console::DevConsoleState;
+
 use input::camera::CameraControlPlugin;
 
 pub struct ShellPlugin;
@@ -17,7 +24,10 @@ impl Plugin for ShellPlugin {
     app.add_plugins(EguiPlugin::default());
     app.add_plugins(EnhancedInputPlugin);
     app.add_plugins(CameraControlPlugin);
+
+    #[cfg(feature = "dev")]
     app.insert_resource(DevConsoleState::default());
+
     app.add_systems(
       Startup,
       (
@@ -35,12 +45,17 @@ impl Plugin for ShellPlugin {
         reactive::render_new_staff,
         reactive::render_new_customers,
         reactive::sync_agent_transform,
-        debug_gizmos::draw_spawn_position_highlight_system,
-        debug_gizmos::draw_agent_path_preview_system,
-        debug_gizmos::draw_world_axes,
-        debug_gizmos::draw_appliance_direction_gizmos,
+        #[cfg(feature = "dev")]
+        (
+          debug_gizmos::draw_spawn_position_highlight_system,
+          debug_gizmos::draw_agent_path_preview_system,
+          debug_gizmos::draw_world_axes,
+          debug_gizmos::draw_appliance_direction_gizmos,
+        ),
       ),
     );
+
+    #[cfg(feature = "dev")]
     app.add_systems(
       EguiPrimaryContextPass,
       dev_console::render_egui_console,

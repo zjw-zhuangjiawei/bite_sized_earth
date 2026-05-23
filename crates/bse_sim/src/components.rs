@@ -5,9 +5,6 @@ use bevy::prelude::*;
 /// World-grid position customers navigate to when leaving.
 pub const EXIT_POSITION: (i32, i32) = (0, 0);
 
-/// Marker component for the main isometric camera entity.
-#[derive(Component)]
-pub struct MainCamera;
 
 // =========================================================================
 // 1. 通用"肉体与运动"套件 — 所有人共有，不带任何身份倾向
@@ -96,13 +93,6 @@ impl GridDirection {
     }
   }
 
-  pub fn actual_dimensions(base_width: i32, base_depth: i32, dir: Self) -> (i32, i32) {
-    match dir {
-      Self::PosZ | Self::NegZ => (base_width, base_depth),
-      Self::PosX | Self::NegX => (base_depth, base_width),
-    }
-  }
-
   pub fn facing_offset(self) -> (i32, i32) {
     match self {
       Self::PosZ => (0, 1),
@@ -116,25 +106,37 @@ impl GridDirection {
 /// 纯物理形体：只描述占据哪些网格，不描述"是什么"
 #[derive(Component, Debug, Clone, Copy)]
 pub struct ApplianceGeometry {
-  pub base_width: i32,
-  pub base_depth: i32,
+  /// Cells extending to the right of the facing direction (perpendicular axis)
+  pub right: i32,
+  /// Cells extending forward along the facing direction
+  pub forward: i32,
   pub direction: GridDirection,
 }
 
-/// 基于 anchor（玩家点击的格子）+ geometry 计算出所有被占网格坐标。
+/// Compute all grid cells occupied by an appliance.
 ///
-/// 约定：N/E 向正方向 (+X,+Z) 展开，S/W 向负方向 (-X,-Z) 展开。
-/// 这样 2×1 物体在 N/S 方向会占据不同的格子（向西 vs 向东延伸）。
+/// `anchor` is the left-back corner of the appliance (from the facing direction's perspective).
+/// The appliance extends `right` cells to the right (perpendicular to facing) and
+/// `forward` cells along the facing direction.
+///
+/// Mapping rules:
+/// - PosZ: right=+X, forward=+Z
+/// - NegZ: right=-X, forward=-Z
+/// - PosX: right=-Z, forward=+X
+/// - NegX: right=+Z, forward=-X
 pub fn get_footprint(geometry: &ApplianceGeometry, anchor: (i32, i32)) -> Vec<(i32, i32)> {
-  let (w, d) = GridDirection::actual_dimensions(geometry.base_width, geometry.base_depth, geometry.direction);
-  let (start_x, start_z) = match geometry.direction {
-    GridDirection::PosZ | GridDirection::NegX => (anchor.0, anchor.1),
-    GridDirection::NegZ | GridDirection::PosX => (anchor.0 - w + 1, anchor.1 - d + 1),
+  let (sx, sz) = match geometry.direction {
+    GridDirection::PosZ | GridDirection::NegZ => (geometry.right, geometry.forward),
+    GridDirection::PosX | GridDirection::NegX => (geometry.forward, geometry.right),
   };
-  let mut cells = Vec::with_capacity((w * d) as usize);
-  for dx in 0..w {
-    for dz in 0..d {
-      cells.push((start_x + dx, start_z + dz));
+  let (ax, az) = match geometry.direction {
+    GridDirection::PosZ | GridDirection::NegX => (anchor.0, anchor.1),
+    GridDirection::NegZ | GridDirection::PosX => (anchor.0 - sx + 1, anchor.1 - sz + 1),
+  };
+  let mut cells = Vec::with_capacity((sx * sz) as usize);
+  for dx in 0..sx {
+    for dz in 0..sz {
+      cells.push((ax + dx, az + dz));
     }
   }
   cells

@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bse_core::components::{ApplianceGeometry, GridPosition, MovementProgress, PathQueue};
+use bse_sim::components::{ApplianceGeometry, GridPosition, MovementProgress, PathQueue};
 use crate::dev_console::DevConsoleState;
 
 /// 在 DevConsoleState 的 anchor 位置画一个半透明绿色方块（XZ 平面）

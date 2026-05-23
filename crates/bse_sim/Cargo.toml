@@ -1,8 +1,11 @@
 [package]
-name = "bse_core"
+name = "bse_sim"
 version = "0.1.0"
-authors = ["Zhuang Jiawei <zjw@stu.scau.edu.cn>"]
 edition = "2024"
+
+[features]
+dev = []
 
 [dependencies]
 bevy = { workspace = true }
+pathfinding = "4.15"

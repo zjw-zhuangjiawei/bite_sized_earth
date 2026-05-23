@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bse_core::components::{GridPosition, MovementProgress, NavigationComplete, PathQueue};
+use crate::components::{GridPosition, MovementProgress, NavigationComplete, PathQueue};
 
 /// Identity-agnostic movement tick — logic only.
 ///

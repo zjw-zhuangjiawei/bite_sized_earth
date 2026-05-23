@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bse_core::components::{
+use bse_sim::components::{
   ApplianceGeometry, ChairState, Customer, GridDirection, GridPosition, MovementProgress,
   RegisterState, Staff, StoveState, TableState,
 };
@@ -11,7 +11,7 @@ fn spawn_appliance_mesh(
   entity: Entity,
   pos: &GridPosition,
   geo: &ApplianceGeometry,
-  shape: Cuboid,
+  height: f32,
   color: Srgba,
   y_offset: f32,
 ) {
@@ -21,17 +21,20 @@ fn spawn_appliance_mesh(
     GridDirection::NegZ => std::f32::consts::PI,
     GridDirection::PosX => std::f32::consts::FRAC_PI_2,
   };
-  let (actual_w, actual_d) =
-    GridDirection::actual_dimensions(geo.base_width, geo.base_depth, geo.direction);
+  // World-space grid extents: sx cells along X, sz cells along Z
+  let (sx, sz) = match geo.direction {
+    GridDirection::PosZ | GridDirection::NegZ => (geo.right, geo.forward),
+    GridDirection::PosX | GridDirection::NegX => (geo.forward, geo.right),
+  };
   let offset_sign = match geo.direction {
     GridDirection::PosZ | GridDirection::NegX => 1.0,
     GridDirection::NegZ | GridDirection::PosX => -1.0,
   };
-  let world_x = pos.x as f32 + offset_sign * (actual_w as f32 - 1.0) / 2.0;
-  let world_z = pos.z as f32 + offset_sign * (actual_d as f32 - 1.0) / 2.0;
+  let world_x = pos.x as f32 + offset_sign * (sx as f32 - 1.0) / 2.0;
+  let world_z = pos.z as f32 + offset_sign * (sz as f32 - 1.0) / 2.0;
 
   commands.entity(entity).insert((
-    Mesh3d(meshes.add(shape)),
+    Mesh3d(meshes.add(Cuboid::new(sx as f32, height, sz as f32))),
     MeshMaterial3d(materials.add(StandardMaterial {
       base_color: Color::Srgba(color),
       ..default()
@@ -58,7 +61,7 @@ pub fn render_tables(
       entity,
       pos,
       geo,
-      Cuboid::new(geo.base_width as f32, 0.6, geo.base_depth as f32),
+      0.6,
       Srgba::new(0.8, 0.6, 0.4, 1.0),
       0.3,
     );
@@ -127,7 +130,7 @@ pub fn render_registers(
       entity,
       pos,
       geo,
-      Cuboid::new(geo.base_width as f32, 0.8, geo.base_depth as f32),
+      0.8,
       Srgba::new(0.4, 0.2, 0.1, 1.0),
       0.4,
     );
@@ -151,7 +154,7 @@ pub fn render_stoves(
       entity,
       pos,
       geo,
-      Cuboid::new(geo.base_width as f32, 0.4, geo.base_depth as f32),
+      0.4,
       Srgba::new(0.15, 0.15, 0.15, 1.0),
       0.2,
     );

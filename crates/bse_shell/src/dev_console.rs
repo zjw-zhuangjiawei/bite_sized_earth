@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use bevy_egui::{EguiContexts, egui};
-use bse_core::components::GridDirection;
-use bse_core::messages::{
+use bse_sim::components::GridDirection;
+use bse_sim::messages::{
   DebugSpawnCustomerRequest, DebugSpawnStaffRequest, RequestDemolishAppliance, RequestPlaceChair,
   RequestPlaceRegister, RequestPlaceStove, RequestPlaceTable,
 };

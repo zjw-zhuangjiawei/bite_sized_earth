@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bse_core::components::{
+use crate::components::{
   GridPosition, MovementProgress, NavigationComplete, Staff, StaffState, StaffTarget,
   StoveState, TableState,
 };
@@ -8,7 +8,7 @@ use crate::navigation_cmd::NavigateTo;
 /// System 1: Idle staff pick up pending orders and head to a stove.
 pub fn staff_pickup_system(
   mut commands: Commands,
-  mut order_queue: ResMut<bse_core::OrderQueue>,
+  mut order_queue: ResMut<crate::OrderQueue>,
   mut staff_q: Query<(Entity, &GridPosition, &mut Staff), Without<StaffTarget>>,
   stove_q: Query<&GridPosition, (With<StoveState>, Without<NavigationComplete>)>,
 ) {

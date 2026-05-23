@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bse_core::components::{
+use crate::components::{
   BelongsToTable, ChairState, Customer, CustomerState, GridPosition, NavigationComplete, SeatedAt,
   TableState, EXIT_POSITION,
 };
@@ -63,7 +63,7 @@ pub fn customer_find_seat_system(
 /// Customer arrived at chair via NavigationComplete -> place order.
 pub fn customer_arrive_at_seat_system(
     mut commands: Commands,
-    mut order_queue: ResMut<bse_core::OrderQueue>,
+    mut order_queue: ResMut<crate::OrderQueue>,
     mut customer_q: Query<(Entity, &mut Customer, &SeatedAt), With<NavigationComplete>>,
     chair_q: Query<&BelongsToTable>,
     mut table_q: Query<&mut TableState>,

@@ -1770,9 +1770,8 @@ name = "bite_sized_earth"
 version = "0.1.0"
 dependencies = [
  "bevy",
- "bse_core",
- "bse_logic",
  "bse_shell",
+ "bse_sim",
 ]
 
 [[package]]
@@ -1843,29 +1842,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "bse_core"
-version = "0.1.0"
-dependencies = [
- "bevy",
-]
-
-[[package]]
-name = "bse_logic"
-version = "0.1.0"
-dependencies = [
- "bevy",
- "bse_core",
- "pathfinding",
-]
-
-[[package]]
 name = "bse_shell"
 version = "0.1.0"
 dependencies = [
  "bevy",
  "bevy_egui",
  "bevy_enhanced_input",
- "bse_core",
+ "bse_sim",
+]
+
+[[package]]
+name = "bse_sim"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "pathfinding",
 ]
 
 [[package]]

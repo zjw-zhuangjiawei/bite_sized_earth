@@ -3,8 +3,11 @@ name = "bse_shell"
 version = "0.1.0"
 edition = "2024"
 
+[features]
+dev = ["bse_sim/dev"]
+
 [dependencies]
 bevy = { workspace = true }
 bevy_egui = "0.39"
 bevy_enhanced_input = "0.25"
-bse_core = { workspace = true }
+bse_sim = { workspace = true }

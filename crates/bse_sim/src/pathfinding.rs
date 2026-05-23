@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use bse_core::world::WorldGridMap;
+use crate::world::WorldGridMap;
 use pathfinding::prelude::astar;
 
 pub fn compute_agent_path(

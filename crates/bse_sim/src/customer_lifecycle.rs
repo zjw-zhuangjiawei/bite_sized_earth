@@ -1,11 +1,12 @@
 use bevy::prelude::*;
 use crate::components::{
-  BelongsToTable, ChairState, Customer, CustomerState, GridPosition, NavigationComplete, SeatedAt,
-  TableState, EXIT_POSITION,
+    BelongsToTable, ChairState, Customer, CustomerState, GridPosition, InteractionPoints,
+    NavigationComplete, SeatedAt, TableState, EXIT_POSITION,
 };
 use crate::navigation_cmd::NavigateTo;
+use crate::world::GridLayers;
 
-/// Find available chair bound to an Empty table, reserve it.
+/// Find available chair bound to an Empty table, reserve it, navigate customer there.
 pub fn customer_find_seat_system(
     mut commands: Commands,
     mut customer_q: Query<
@@ -17,6 +18,7 @@ pub fn customer_find_seat_system(
         &GridPosition,
         &mut ChairState,
         &BelongsToTable,
+        &InteractionPoints,
     )>,
     mut table_q: Query<&mut TableState>,
 ) {
@@ -25,8 +27,7 @@ pub fn customer_find_seat_system(
             continue;
         }
 
-        for (chair_entity, chair_pos, mut chair_state, bound) in chair_q.iter_mut() {
-            // Check table is empty
+        for (chair_entity, chair_pos, mut chair_state, bound, points) in chair_q.iter_mut() {
             let mut table_empty = false;
             if let Ok(ts) = table_q.get(bound.table) {
                 if *ts == TableState::Empty {
@@ -37,18 +38,20 @@ pub fn customer_find_seat_system(
                 continue;
             }
 
-            // Mark table as Occupied
             if let Ok(mut ts) = table_q.get_mut(bound.table) {
                 *ts = TableState::Occupied;
             }
 
             *chair_state = ChairState::Reserved;
 
+            let target = points.cells.first().copied().unwrap_or((chair_pos.x, chair_pos.z));
             commands.entity(c_entity).queue(NavigateTo {
-                target: (chair_pos.x, chair_pos.z),
+                target,
                 speed: 3.0,
             });
-            commands.entity(c_entity).insert(SeatedAt { chair: chair_entity });
+            commands
+                .entity(c_entity)
+                .insert(SeatedAt { chair: chair_entity });
 
             customer.state = CustomerState::WalkingToSeat;
             info!(
@@ -77,7 +80,6 @@ pub fn customer_arrive_at_seat_system(
             continue;
         };
 
-        // Mark table as Ordered and push to queue (only once)
         if let Ok(mut ts) = table_q.get_mut(bound.table) {
             if *ts != TableState::Occupied {
                 continue;
@@ -101,7 +103,6 @@ pub fn customer_eating_system(
     table_q: Query<&TableState>,
 ) {
     for (c_entity, mut customer, seated) in customer_q.iter_mut() {
-        // Transition: WaitingForFood -> Eating(5.0) when table is Served
         if customer.state == CustomerState::WaitingForFood {
             if let Ok(bound) = chair_q.get(seated.chair) {
                 if let Ok(ts) = table_q.get(bound.table) {
@@ -113,7 +114,6 @@ pub fn customer_eating_system(
             }
         }
 
-        // Tick eating timer
         let should_leave = match customer.state {
             CustomerState::Eating(ref mut remaining) => {
                 *remaining -= time.delta_secs();
@@ -127,16 +127,16 @@ pub fn customer_eating_system(
                 target: EXIT_POSITION,
                 speed: 3.0,
             });
-
             customer.state = CustomerState::Leaving;
             info!("Customer finished eating, leaving");
         }
     }
 }
 
-/// Customer reached exit -> despawn, mark table Dirty.
+/// Customer reached exit -> despawn, mark table Dirty, release reservation.
 pub fn customer_exit_and_despawn_system(
     mut commands: Commands,
+    mut grid: ResMut<GridLayers>,
     customer_q: Query<(Entity, &Customer, &SeatedAt), With<NavigationComplete>>,
     chair_q: Query<&BelongsToTable>,
     mut table_q: Query<&mut TableState>,
@@ -153,6 +153,10 @@ pub fn customer_exit_and_despawn_system(
         if let Ok(mut ts) = table_q.get_mut(bound.table) {
             *ts = TableState::Dirty;
         }
+
+        // Release all reserved cells for this entity
+        grid.release_all(entity);
+
         info!(
             "Customer reached exit, table {:?} dirty, despawning",
             bound.table
@@ -172,8 +176,6 @@ pub fn cleanup_table_system(
             continue;
         }
         *ts = TableState::Empty;
-
-        // Release all chairs bound to this table
         for (mut chair_state, bound) in chair_q.iter_mut() {
             if bound.table == te {
                 *chair_state = ChairState::Available;

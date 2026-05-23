@@ -46,25 +46,26 @@ fn spawn_appliance_mesh(
 
 pub fn render_tables(
   mut commands: Commands,
-  mut meshes: ResMut<Assets<Mesh>>,
-  mut materials: ResMut<Assets<StandardMaterial>>,
+  assets: Res<AssetServer>,
   query: Query<
     (Entity, &GridPosition, &ApplianceGeometry),
-    (Added<ApplianceGeometry>, With<TableState>, Without<Mesh3d>),
+    (Added<ApplianceGeometry>, With<TableState>),
   >,
 ) {
   for (entity, pos, geo) in query.iter() {
-    spawn_appliance_mesh(
-      &mut commands,
-      &mut meshes,
-      &mut materials,
-      entity,
-      pos,
-      geo,
-      0.6,
-      Srgba::new(0.8, 0.6, 0.4, 1.0),
-      0.3,
-    );
+    let rotation_y = match geo.direction {
+      GridDirection::PosZ => 0.0,
+      GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
+      GridDirection::NegZ => std::f32::consts::PI,
+      GridDirection::PosX => std::f32::consts::FRAC_PI_2,
+    };
+    let scale = 1.0 / 16.0;
+    commands.entity(entity).insert((
+      SceneRoot(assets.load("table.vox")),
+      Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
+        .with_scale(Vec3::splat(scale))
+        .with_rotation(Quat::from_rotation_y(rotation_y)),
+    ));
   }
 }
 

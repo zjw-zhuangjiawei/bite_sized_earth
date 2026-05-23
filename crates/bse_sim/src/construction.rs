@@ -1,23 +1,15 @@
 use bevy::prelude::*;
-use crate::components::{ApplianceGeometry, GridDirection, GridPosition, get_footprint};
-use crate::world::{GridOccupancy, WorldGridMap};
+use smallvec::SmallVec;
 
-/// Check footprint and fill grid; returns true if placement succeeded.
-fn try_place(
-    grid_map: &mut WorldGridMap,
-    anchor: (i32, i32),
-    geometry: &ApplianceGeometry,
-) -> bool {
-    let footprint = get_footprint(geometry, anchor);
-    if !grid_map.is_area_empty(&footprint) {
-        return false;
-    }
-    grid_map.fill_area(&footprint, GridOccupancy::Occupied);
-    true
-}
+use crate::components::{
+  ApplianceGeometry, GridDirection, GridFootprint, GridPosition, InteractionPoints,
+  InteractionRule, get_footprint,
+};
+use crate::messages::GridChangedMessage;
+use crate::world::{GridLayer, GridLayers};
 
 // =============================================================================
-// define_appliances! macro -- generates one message type + one handler per appliance
+// define_appliances! macro
 // =============================================================================
 
 macro_rules! define_appliances {
@@ -27,7 +19,9 @@ macro_rules! define_appliances {
             $handler:ident : $msg:ident {
                 right: $right:literal,
                 forward: $forward:literal,
+                layer: $layer:ident,
                 identity: $identity:ty,
+                interaction: $interaction:ident $( { $($ikey:ident : $ival:expr),* $(,)? } )?,
             }
         ),+
         $(,)?
@@ -46,7 +40,8 @@ macro_rules! define_appliances {
 
             pub fn $handler(
                 mut commands: Commands,
-                mut grid_map: ResMut<WorldGridMap>,
+                mut grid: ResMut<GridLayers>,
+                mut writer: MessageWriter<GridChangedMessage>,
                 mut reader: MessageReader<$msg>,
             ) {
                 for req in reader.read() {
@@ -55,68 +50,185 @@ macro_rules! define_appliances {
                         forward: $forward,
                         direction: req.direction,
                     };
-                    let anchor = req.anchor;
-                    if try_place(&mut grid_map, anchor, &geometry) {
-                        commands.spawn((
-                            GridPosition { x: anchor.0, z: anchor.1 },
+                    let footprint_cells: Vec<(i32, i32)> =
+                        get_footprint(&geometry, req.anchor);
+
+                    // Pre-compute interaction cells
+                    let bounds = (grid.width, grid.height);
+                    let interaction_rule = define_appliances!(@interaction_rule
+                        $interaction $( { $($ikey : $ival),* } )?
+                    );
+                    let (_initial_points, filtered_points): (Vec<(i32, i32)>, SmallVec<[(i32, i32); 8]>) = match &interaction_rule {
+                        InteractionRule::Front => {
+                            let temp_pos = GridPosition { x: req.anchor.0, z: req.anchor.1 };
+                            let pts = crate::interaction::compute_front_cells(&temp_pos, &geometry, bounds).into_vec();
+                            let filtered = pts.iter().copied()
+                                .filter(|&(x, z)| grid.floor_entity_at(x, z).is_none())
+                                .collect();
+                            (pts, filtered)
+                        }
+                        InteractionRule::AllAdjacent { range } => {
+                            let footprint = GridFootprint {
+                                cells: footprint_cells.iter().copied().collect(),
+                            };
+                            let pts = crate::interaction::compute_adjacent_cells(&footprint, *range, bounds).into_vec();
+                            let filtered = pts.iter().copied()
+                                .filter(|&(x, z)| grid.floor_entity_at(x, z).is_none())
+                                .collect();
+                            (pts, filtered)
+                        }
+                        InteractionRule::OnSite => {
+                            // Interaction cells are the entity's own footprint.
+                            let pts = footprint_cells.clone();
+                            let filtered = pts.iter().copied().collect();
+                            (pts, filtered)
+                        }
+                    };
+
+                    let footprint_sv: SmallVec<[(i32, i32); 8]> =
+                        footprint_cells.iter().copied().collect();
+
+                    // Spawn first to get entity id, then write into GridLayers
+                    let entity = commands
+                        .spawn((
+                            GridPosition { x: req.anchor.0, z: req.anchor.1 },
+                            GridFootprint {
+                                cells: footprint_sv.clone(),
+                            },
+                            GridLayer::$layer,
                             geometry,
                             <$identity>::default(),
-                        ));
-                        info!(
-                            concat!("Placed ", stringify!($msg), " at ({},{}), direction {:?}"),
-                            anchor.0, anchor.1, req.direction,
-                        );
+                            interaction_rule,
+                            InteractionPoints { cells: filtered_points },
+                        ))
+                        .id();
+
+                    // Write into grid with the real entity
+                    let ok = match GridLayer::$layer {
+                        GridLayer::Floor => {
+                            grid.try_place_floor(&footprint_cells, entity)
+                        }
+                        GridLayer::Ceiling => {
+                            if let Some(&c) = footprint_cells.first() {
+                                grid.try_place_ceiling(c, entity)
+                            } else {
+                                false
+                            }
+                        }
+                        GridLayer::Surface => {
+                            if let Some(&c) = footprint_cells.first() {
+                                grid.add_surface(c, entity)
+                            } else {
+                                false
+                            }
+                        }
+                    };
+
+                    if !ok {
+                        commands.entity(entity).despawn();
+                        continue;
                     }
+
+                    // Broadcast
+                    let changed: SmallVec<[(i32, i32); 8]> =
+                        footprint_cells.iter().copied().collect();
+                    writer.write(GridChangedMessage {
+                        cells: changed,
+                        layer: GridLayer::$layer,
+                    });
+
+                    info!(
+                        concat!("Placed ", stringify!($msg), " at ({},{}), direction {:?}"),
+                        req.anchor.0, req.anchor.1, req.direction,
+                    );
                 }
             }
         )*
     };
+
+    (@interaction_rule Front) => { InteractionRule::Front };
+    (@interaction_rule Adjacent { range: $range:expr }) => {
+        InteractionRule::AllAdjacent { range: $range }
+    };
+    (@interaction_rule OnSite) => { InteractionRule::OnSite };
 }
 
-// Invoke the macro for all appliances
+// =============================================================================
+// Invoke the macro
+// =============================================================================
+
 define_appliances! {
     handle_place_table: RequestPlaceTable {
-        right: 2, forward: 1,
+        right: 1, forward: 1,
+        layer: Floor,
         identity: crate::components::TableState,
+        interaction: Adjacent { range: 1 },
     },
     handle_place_chair: RequestPlaceChair {
         right: 1, forward: 1,
+        layer: Floor,
         identity: crate::components::ChairState,
+        interaction: OnSite,
     },
     handle_place_register: RequestPlaceRegister {
         right: 2, forward: 1,
+        layer: Floor,
         identity: crate::components::RegisterState,
+        interaction: Adjacent { range: 1 },
     },
     handle_place_stove: RequestPlaceStove {
         right: 2, forward: 1,
+        layer: Floor,
         identity: crate::components::StoveState,
+        interaction: Front,
     },
 }
 
 // =============================================================================
-// Demolish -- shared by both game systems and debug tools
+// Demolish
 // =============================================================================
 
 #[derive(Message, Debug)]
 pub struct RequestDemolishAppliance {
-    pub click: (i32, i32),
+  pub click: (i32, i32),
 }
 
 pub fn handle_demolish_appliance(
-    mut commands: Commands,
-    mut grid_map: ResMut<WorldGridMap>,
-    mut reader: MessageReader<RequestDemolishAppliance>,
-    query: Query<(Entity, &GridPosition, &ApplianceGeometry)>,
+  mut commands: Commands,
+  mut grid: ResMut<GridLayers>,
+  mut writer: MessageWriter<GridChangedMessage>,
+  mut reader: MessageReader<RequestDemolishAppliance>,
+  query: Query<(Entity, &GridFootprint, &GridLayer)>,
 ) {
-    for req in reader.read() {
-        for (entity, pos, geometry) in query.iter() {
-            let footprint = get_footprint(geometry, (pos.x, pos.z));
-            if footprint.contains(&req.click) {
-                grid_map.clear_area(&footprint);
-                commands.entity(entity).despawn();
-                info!("Demolished appliance at ({},{}), footprint {:?}", req.click.0, req.click.1, footprint);
-                break;
-            }
+  for req in reader.read() {
+    for (entity, footprint, layer) in query.iter() {
+      if !footprint.cells.contains(&req.click) {
+        continue;
+      }
+      match layer {
+        GridLayer::Floor => grid.remove_floor(&footprint.cells, entity),
+        GridLayer::Ceiling => {
+          if let Some(&c) = footprint.cells.first() {
+            grid.remove_ceiling(c, entity);
+          }
         }
+        GridLayer::Surface => {
+          if let Some(&c) = footprint.cells.first() {
+            grid.remove_surface(c, entity);
+          }
+        }
+      }
+      let changed: SmallVec<[(i32, i32); 8]> = footprint.cells.iter().copied().collect();
+      writer.write(GridChangedMessage {
+        cells: changed,
+        layer: *layer,
+      });
+      commands.entity(entity).despawn();
+      info!(
+        "Demolished appliance at ({},{}), footprint {:?}",
+        req.click.0, req.click.1, &*footprint.cells,
+      );
+      break;
     }
+  }
 }

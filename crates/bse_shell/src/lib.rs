@@ -9,6 +9,7 @@ pub mod reactive;
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use bevy_enhanced_input::EnhancedInputPlugin;
+use bevy_vox_scene::VoxScenePlugin;
 
 #[cfg(feature = "dev")]
 use bevy_egui::EguiPrimaryContextPass;
@@ -23,6 +24,7 @@ impl Plugin for ShellPlugin {
   fn build(&self, app: &mut App) {
     app.add_plugins(EguiPlugin::default());
     app.add_plugins(EnhancedInputPlugin);
+    app.add_plugins(VoxScenePlugin::default());
     app.add_plugins(CameraControlPlugin);
 
     #[cfg(feature = "dev")]

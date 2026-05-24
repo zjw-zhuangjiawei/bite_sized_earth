@@ -1,6 +1,8 @@
 use crate::dev_console::DevConsoleState;
 use bevy::prelude::*;
-use bse_sim::components::{ApplianceGeometry, GridPosition, MovementProgress, PathQueue};
+use bse_sim::components::{
+  ApplianceGeometry, CustomerZone, GridPosition, MovementProgress, PathQueue, StaffZone,
+};
 
 /// 在 DevConsoleState 的 anchor 位置画一个半透明绿色方块（XZ 平面）
 pub fn draw_spawn_position_highlight_system(state: Res<DevConsoleState>, mut gizmos: Gizmos) {
@@ -73,5 +75,37 @@ pub fn draw_appliance_direction_gizmos(
     let origin = Vec3::new(pos.x as f32, 0.2, pos.z as f32);
     let tip = Vec3::new((pos.x + dx) as f32, 0.2, (pos.z + dz) as f32);
     gizmos.arrow(origin, tip, Color::srgba(0.0, 1.0, 1.0, 0.5));
+  }
+}
+
+/// Blue filled rectangles for CustomerZone cells.
+pub fn draw_customer_zone_gizmos(query: Query<(&GridPosition, &CustomerZone)>, mut gizmos: Gizmos) {
+  for (_pos, zone) in query.iter() {
+    for &(x, z) in zone.cells.iter() {
+      let half = 0.45;
+      let corners = [
+        Vec3::new(x as f32 - half, 0.12, z as f32 - half),
+        Vec3::new(x as f32 + half, 0.12, z as f32 - half),
+        Vec3::new(x as f32 + half, 0.12, z as f32 + half),
+        Vec3::new(x as f32 - half, 0.12, z as f32 + half),
+      ];
+      gizmos.lineloop(corners, Color::srgba(0.2, 0.4, 1.0, 0.6));
+    }
+  }
+}
+
+/// Green filled rectangles for StaffZone cells.
+pub fn draw_staff_zone_gizmos(query: Query<(&GridPosition, &StaffZone)>, mut gizmos: Gizmos) {
+  for (_pos, zone) in query.iter() {
+    for &(x, z) in zone.cells.iter() {
+      let half = 0.45;
+      let corners = [
+        Vec3::new(x as f32 - half, 0.13, z as f32 - half),
+        Vec3::new(x as f32 + half, 0.13, z as f32 - half),
+        Vec3::new(x as f32 + half, 0.13, z as f32 + half),
+        Vec3::new(x as f32 - half, 0.13, z as f32 + half),
+      ];
+      gizmos.lineloop(corners, Color::srgba(0.2, 1.0, 0.4, 0.6));
+    }
   }
 }

@@ -2,8 +2,7 @@ use bevy::prelude::*;
 use smallvec::SmallVec;
 
 use crate::components::{
-  get_footprint, ApplianceGeometry, GridDirection, GridFootprint, GridPosition, InteractionPoints,
-  InteractionRule,
+  get_footprint, ApplianceGeometry, GridDirection, GridFootprint, GridPosition, RegisterQueue,
 };
 use crate::messages::GridChangedMessage;
 use crate::world::{GridLayer, GridLayers};
@@ -21,7 +20,7 @@ macro_rules! define_appliances {
                 forward: $forward:literal,
                 layer: $layer:ident,
                 identity: $identity:ty,
-                interaction: $interaction:ident $( { $($ikey:ident : $ival:expr),* $(,)? } )?,
+                extra_components: [$($extra:expr),* $(,)?],
             }
         ),+
         $(,)?
@@ -39,118 +38,77 @@ macro_rules! define_appliances {
             }
 
             pub fn $handler(
-                mut commands: Commands,
-                mut grid: ResMut<GridLayers>,
-                mut writer: MessageWriter<GridChangedMessage>,
-                mut reader: MessageReader<$msg>,
-            ) {
-                for req in reader.read() {
-                    let geometry = ApplianceGeometry {
-                        right: $right,
-                        forward: $forward,
-                        direction: req.direction,
-                    };
-                    let footprint_cells: Vec<(i32, i32)> =
-                        get_footprint(&geometry, req.anchor);
+                    mut commands: Commands,
+                    mut grid: ResMut<GridLayers>,
+                    mut writer: MessageWriter<GridChangedMessage>,
+                    mut reader: MessageReader<$msg>,
+                ) {
+                    for req in reader.read() {
+                        let geometry = ApplianceGeometry {
+                            right: $right,
+                            forward: $forward,
+                            direction: req.direction,
+                        };
+                        let footprint_cells: Vec<(i32, i32)> =
+                            get_footprint(&geometry, req.anchor);
 
-                    // Pre-compute interaction cells
-                    let bounds = (grid.width, grid.height);
-                    let interaction_rule = define_appliances!(@interaction_rule
-                        $interaction $( { $($ikey : $ival),* } )?
-                    );
-                    let (_initial_points, filtered_points): (Vec<(i32, i32)>, SmallVec<[(i32, i32); 8]>) = match &interaction_rule {
-                        InteractionRule::Front => {
-                            let temp_pos = GridPosition { x: req.anchor.0, z: req.anchor.1 };
-                            let pts = crate::interaction::compute_front_cells(&temp_pos, &geometry, bounds).into_vec();
-                            let filtered = pts.iter().copied()
-                                .filter(|&(x, z)| grid.floor_entity_at(x, z).is_none())
-                                .collect();
-                            (pts, filtered)
-                        }
-                        InteractionRule::AllAdjacent { range } => {
-                            let footprint = GridFootprint {
-                                cells: footprint_cells.iter().copied().collect(),
-                            };
-                            let pts = crate::interaction::compute_adjacent_cells(&footprint, *range, bounds).into_vec();
-                            let filtered = pts.iter().copied()
-                                .filter(|&(x, z)| grid.floor_entity_at(x, z).is_none())
-                                .collect();
-                            (pts, filtered)
-                        }
-                        InteractionRule::OnSite => {
-                            // Interaction cells are the entity's own footprint.
-                            let pts = footprint_cells.clone();
-                            let filtered = pts.iter().copied().collect();
-                            (pts, filtered)
-                        }
-                    };
+                        let footprint_sv: SmallVec<[(i32, i32); 8]> =
+                            footprint_cells.iter().copied().collect();
 
-                    let footprint_sv: SmallVec<[(i32, i32); 8]> =
-                        footprint_cells.iter().copied().collect();
+                        let entity = commands
+                            .spawn((
+                                GridPosition { x: req.anchor.0, z: req.anchor.1 },
+                                GridFootprint {
+                                    cells: footprint_sv.clone(),
+                                },
+                                GridLayer::$layer,
+                                geometry,
+                                <$identity>::default(),
+                                $($extra),*
+                            ))
+                            .id();
 
-                    // Spawn first to get entity id, then write into GridLayers
-                    let entity = commands
-                        .spawn((
-                            GridPosition { x: req.anchor.0, z: req.anchor.1 },
-                            GridFootprint {
-                                cells: footprint_sv.clone(),
-                            },
-                            GridLayer::$layer,
-                            geometry,
-                            <$identity>::default(),
-                            interaction_rule,
-                            InteractionPoints { cells: filtered_points },
-                        ))
-                        .id();
-
-                    // Write into grid with the real entity
-                    let ok = match GridLayer::$layer {
-                        GridLayer::Floor => {
-                            grid.try_place_floor(&footprint_cells, entity)
-                        }
-                        GridLayer::Ceiling => {
-                            if let Some(&c) = footprint_cells.first() {
-                                grid.try_place_ceiling(c, entity)
-                            } else {
-                                false
+                        let ok = match GridLayer::$layer {
+                            GridLayer::Floor => {
+                                grid.try_place_floor(&footprint_cells, entity)
                             }
-                        }
-                        GridLayer::Surface => {
-                            if let Some(&c) = footprint_cells.first() {
-                                grid.add_surface(c, entity)
-                            } else {
-                                false
+                            GridLayer::Ceiling => {
+                                if let Some(&c) = footprint_cells.first() {
+                                    grid.try_place_ceiling(c, entity)
+                                } else {
+                                    false
+                                }
                             }
-                        }
-                    };
+                            GridLayer::Surface => {
+                                if let Some(&c) = footprint_cells.first() {
+                                    grid.add_surface(c, entity)
+                                } else {
+                                    false
+                                }
+                            }
+                        };
 
-                    if !ok {
-                        commands.entity(entity).despawn();
-                        continue;
+                        if !ok {
+                            commands.entity(entity).despawn();
+                            continue;
+                        }
+
+                        let changed: SmallVec<[(i32, i32); 8]> =
+                            footprint_cells.iter().copied().collect();
+                        writer.write(GridChangedMessage {
+                            cells: changed,
+                            layer: GridLayer::$layer,
+                        });
+
+                        info!(
+                            concat!("Placed ", stringify!($msg), " at ({},{}), direction {:?}"),
+                            req.anchor.0, req.anchor.1, req.direction,
+                        );
                     }
-
-                    // Broadcast
-                    let changed: SmallVec<[(i32, i32); 8]> =
-                        footprint_cells.iter().copied().collect();
-                    writer.write(GridChangedMessage {
-                        cells: changed,
-                        layer: GridLayer::$layer,
-                    });
-
-                    info!(
-                        concat!("Placed ", stringify!($msg), " at ({},{}), direction {:?}"),
-                        req.anchor.0, req.anchor.1, req.direction,
-                    );
                 }
-            }
         )*
     };
 
-    (@interaction_rule Front) => { InteractionRule::Front };
-    (@interaction_rule Adjacent { range: $range:expr }) => {
-        InteractionRule::AllAdjacent { range: $range }
-    };
-    (@interaction_rule OnSite) => { InteractionRule::OnSite };
 }
 
 // =============================================================================
@@ -162,25 +120,25 @@ define_appliances! {
         right: 1, forward: 1,
         layer: Floor,
         identity: crate::components::TableState,
-        interaction: Adjacent { range: 1 },
+        extra_components: [],
     },
     handle_place_chair: RequestPlaceChair {
         right: 1, forward: 1,
         layer: Floor,
         identity: crate::components::ChairState,
-        interaction: OnSite,
+        extra_components: [],
     },
     handle_place_register: RequestPlaceRegister {
         right: 2, forward: 1,
         layer: Floor,
         identity: crate::components::RegisterState,
-        interaction: Adjacent { range: 1 },
+        extra_components: [RegisterQueue::default()],
     },
     handle_place_stove: RequestPlaceStove {
         right: 2, forward: 1,
         layer: Floor,
         identity: crate::components::StoveState,
-        interaction: Front,
+        extra_components: [],
     },
 }
 

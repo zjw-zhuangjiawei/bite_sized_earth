@@ -1,6 +1,6 @@
 use crate::components::{
-  GridPosition, InteractionPoints, MovementProgress, NavigationComplete, Staff, StaffState,
-  StaffTarget, StoveState, TableState,
+  ApplianceGeometry, GridFootprint, GridPosition, MovementProgress, NavigationComplete, Staff,
+  StaffState, StaffTarget, StaffZone, StoveState, TableState,
 };
 use crate::navigation_cmd::NavigateTo;
 use crate::world::GridLayers;
@@ -11,7 +11,7 @@ pub fn staff_pickup_system(
   mut commands: Commands,
   mut order_queue: ResMut<crate::OrderQueue>,
   mut staff_q: Query<(Entity, &GridPosition, &mut Staff), Without<StaffTarget>>,
-  stove_q: Query<(&GridPosition, &InteractionPoints), With<StoveState>>,
+  stove_q: Query<(&GridPosition, &StaffZone), With<StoveState>>,
 ) {
   if order_queue.pending.is_empty() {
     return;
@@ -28,18 +28,18 @@ pub fn staff_pickup_system(
     // Find nearest stove with at least one available interaction cell
     let best = stove_q
       .iter()
-      .filter(|(_, pts)| !pts.cells.is_empty())
+      .filter(|(_, zone)| !zone.cells.is_empty())
       .min_by_key(|(stove_pos, _)| {
         (staff_pos.x - stove_pos.x).abs() + (staff_pos.z - stove_pos.z).abs()
       });
 
-    let Some((_stove_pos, points)) = best else {
+    let Some((_stove_pos, zone)) = best else {
       order_queue.pending.push_front(table_entity);
       continue;
     };
 
     // Pick the closest interaction cell
-    let target = points
+    let target = zone
       .cells
       .iter()
       .min_by_key(|&&(x, z)| (staff_pos.x - x).abs() + (staff_pos.z - z).abs())
@@ -80,7 +80,7 @@ pub fn staff_cooking_system(
     Without<MovementProgress>,
   >,
   mut stove_q: Query<(&GridPosition, &mut StoveState)>,
-  table_q: Query<(&GridPosition, &InteractionPoints), With<TableState>>,
+  table_q: Query<(&GridPosition, &StaffZone), With<TableState>>,
 ) {
   let delta = time.delta_secs();
   let mut to_deliver: Vec<(Entity, Entity, (i32, i32))> = Vec::new();
@@ -106,8 +106,8 @@ pub fn staff_cooking_system(
       if *remaining <= 0.0 {
         staff.state = StaffState::Delivering;
         // Find target table and pick an interaction cell
-        if let Ok((_table_pos, points)) = table_q.get(task.target_table) {
-          let target_cell = points
+        if let Ok((_table_pos, zone)) = table_q.get(task.target_table) {
+          let target_cell = zone
             .cells
             .iter()
             .min_by_key(|&&(x, z)| (staff_pos.x - x).abs() + (staff_pos.z - z).abs())
@@ -173,5 +173,29 @@ pub fn staff_deliver_system(
     if let Ok((_, mut state)) = table_q.get_mut(*table_entity) {
       *state = TableState::Served;
     }
+  }
+}
+
+/// Zone system: compute StaffZone for tables (adjacent cells within 1 Manhattan distance).
+pub fn update_table_zones(
+  mut commands: Commands,
+  query: Query<(Entity, &GridFootprint), (With<TableState>, Without<StaffZone>)>,
+) {
+  for (entity, footprint) in query.iter() {
+    commands.entity(entity).insert(StaffZone {
+      cells: crate::zone_helpers::adjacent_cells(footprint, 1),
+    });
+  }
+}
+
+/// Zone system: compute StaffZone for stoves (front cells, 1 row deep).
+pub fn update_stove_zones(
+  mut commands: Commands,
+  query: Query<(Entity, &GridPosition, &ApplianceGeometry), (With<StoveState>, Without<StaffZone>)>,
+) {
+  for (entity, pos, geo) in query.iter() {
+    commands.entity(entity).insert(StaffZone {
+      cells: crate::zone_helpers::front_cells((pos.x, pos.z), geo, 1),
+    });
   }
 }

@@ -86,10 +86,11 @@ pub fn render_chairs(
       GridDirection::PosX => std::f32::consts::FRAC_PI_2,
     };
 
-    commands
-      .entity(entity)
-      .insert((Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
-        .with_rotation(Quat::from_rotation_y(rotation_y)),));
+    commands.entity(entity).insert((
+      Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
+        .with_rotation(Quat::from_rotation_y(rotation_y)),
+      Visibility::default(),
+    ));
 
     commands.entity(entity).with_children(|parent| {
       // Lower step (wider base)

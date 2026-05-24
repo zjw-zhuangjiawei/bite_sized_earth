@@ -3,13 +3,14 @@ pub mod construction;
 pub mod customer_lifecycle;
 #[cfg(feature = "dev")]
 pub mod dev_systems;
-pub mod interaction;
 pub mod kitchen_workflow;
 pub mod messages;
 pub mod movement;
 pub mod navigation_cmd;
 pub mod pathfinding;
+pub mod register_workflow;
 pub mod world;
+pub mod zone_helpers;
 
 use bevy::prelude::*;
 use std::collections::VecDeque;
@@ -42,10 +43,15 @@ impl Plugin for SimPlugin {
       ),
     );
 
-    // ── Interaction-point refresh (reads GridChangedMessage) ──
+    // ── Zone computation (once per new appliance) ──
     app.add_systems(
       Update,
-      interaction::refresh_interaction_points_on_grid_change,
+      (
+        register_workflow::update_register_zones,
+        kitchen_workflow::update_table_zones,
+        kitchen_workflow::update_stove_zones,
+        dev_systems::update_chair_zones,
+      ),
     );
 
     // ── Dev-only spawning ──
@@ -78,7 +84,9 @@ impl Plugin for SimPlugin {
         bevy::ecs::schedule::ApplyDeferred,
         (
           kitchen_workflow::staff_deliver_system,
+          register_workflow::customer_arrive_at_register_system,
           customer_lifecycle::customer_eating_system,
+          register_workflow::staff_checkout_system,
           customer_lifecycle::customer_exit_and_despawn_system,
           customer_lifecycle::cleanup_table_system,
         ),

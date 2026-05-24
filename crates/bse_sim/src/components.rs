@@ -26,6 +26,16 @@ pub struct GridFootprint {
   pub cells: SmallVec<[(i32, i32); 8]>,
 }
 
+#[derive(Component, Debug, Clone)]
+pub struct CustomerZone {
+  pub cells: SmallVec<[(i32, i32); 8]>,
+}
+
+#[derive(Component, Debug, Clone)]
+pub struct StaffZone {
+  pub cells: SmallVec<[(i32, i32); 8]>,
+}
+
 // =========================================================================
 // 2. Movement suite
 // =========================================================================
@@ -50,25 +60,6 @@ pub struct NavigationComplete;
 // 3. Interaction
 // =========================================================================
 
-/// Immutable rule describing how interaction cells are derived for an appliance.
-/// Written once at spawn, never changed.
-#[derive(Component, Debug, Clone)]
-pub enum InteractionRule {
-  /// Cells in front of the appliance along its facing direction.
-  Front,
-  /// All cells within `range` Manhattan distance of the footprint.
-  AllAdjacent { range: u32 },
-  /// The entity's own footprint cells (e.g. chair — agent sits on the chair).
-  OnSite,
-}
-
-/// Mutable set of currently-available interaction cells.  Computed at spawn
-/// and refreshed on-demand when a neighbour changes.
-#[derive(Component, Debug, Clone)]
-pub struct InteractionPoints {
-  pub cells: SmallVec<[(i32, i32); 8]>,
-}
-
 // =========================================================================
 // 4. Actor identity + state
 // =========================================================================
@@ -84,6 +75,8 @@ pub enum CustomerState {
   WalkingToSeat,
   WaitingForFood,
   Eating(f32),
+  WalkingToRegister,
+  WaitingForPayment,
   Leaving,
 }
 
@@ -99,6 +92,8 @@ pub enum StaffState {
   WalkingToKitchen,
   Cooking(f32),
   Delivering,
+  WalkingToRegister,
+  CheckingOut(f32),
 }
 
 #[derive(Component, Debug, Clone, Copy)]
@@ -213,4 +208,16 @@ pub enum StoveState {
   #[default]
   Idle,
   Cooking(f32),
+}
+
+#[derive(Component, Debug, Clone, Copy)]
+pub struct ProcessingCustomer {
+  pub customer: Entity,
+}
+
+/// Per-register queue of customers waiting to pay.
+/// Front of Vec = first in line (closest to being served).
+#[derive(Component, Debug, Clone, Default)]
+pub struct RegisterQueue {
+  pub customers: Vec<Entity>,
 }

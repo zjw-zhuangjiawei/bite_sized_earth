@@ -1,6 +1,6 @@
 use crate::components::{
-  BelongsToTable, ChairState, Customer, CustomerState, GridPosition, InteractionPoints,
-  NavigationComplete, SeatedAt, TableState, EXIT_POSITION,
+  BelongsToTable, ChairState, Customer, CustomerState, CustomerZone, GridPosition,
+  NavigationComplete, RegisterState, SeatedAt, TableState, EXIT_POSITION,
 };
 use crate::navigation_cmd::NavigateTo;
 use crate::world::GridLayers;
@@ -15,7 +15,7 @@ pub fn customer_find_seat_system(
     &GridPosition,
     &mut ChairState,
     &BelongsToTable,
-    &InteractionPoints,
+    &CustomerZone,
   )>,
   mut table_q: Query<&mut TableState>,
 ) {
@@ -24,7 +24,7 @@ pub fn customer_find_seat_system(
       continue;
     }
 
-    for (chair_entity, chair_pos, mut chair_state, bound, points) in chair_q.iter_mut() {
+    for (chair_entity, chair_pos, mut chair_state, bound, zone) in chair_q.iter_mut() {
       let mut table_empty = false;
       if let Ok(ts) = table_q.get(bound.table) {
         if *ts == TableState::Empty {
@@ -41,7 +41,7 @@ pub fn customer_find_seat_system(
 
       *chair_state = ChairState::Reserved;
 
-      let target = points
+      let target = zone
         .cells
         .first()
         .copied()
@@ -98,11 +98,15 @@ pub fn customer_arrive_at_seat_system(
 pub fn customer_eating_system(
   mut commands: Commands,
   time: Res<Time>,
-  mut customer_q: Query<(Entity, &mut Customer, &SeatedAt), Without<NavigationComplete>>,
+  mut customer_q: Query<
+    (Entity, &GridPosition, &mut Customer, &SeatedAt),
+    Without<NavigationComplete>,
+  >,
   chair_q: Query<&BelongsToTable>,
   table_q: Query<&TableState>,
+  register_zone_q: Query<&CustomerZone, With<RegisterState>>,
 ) {
-  for (c_entity, mut customer, seated) in customer_q.iter_mut() {
+  for (c_entity, c_pos, mut customer, seated) in customer_q.iter_mut() {
     if customer.state == CustomerState::WaitingForFood {
       if let Ok(bound) = chair_q.get(seated.chair) {
         if let Ok(ts) = table_q.get(bound.table) {
@@ -123,12 +127,33 @@ pub fn customer_eating_system(
     };
 
     if should_leave {
-      commands.entity(c_entity).queue(NavigateTo {
-        target: EXIT_POSITION,
-        speed: 3.0,
-      });
-      customer.state = CustomerState::Leaving;
-      info!("Customer finished eating, leaving");
+      // Try nearest register with available zone cells
+      let mut best_dist = i32::MAX;
+      let mut best_cell = None;
+      for zone in register_zone_q.iter() {
+        if let Some(&cell) = zone.cells.last() {
+          let dist = (c_pos.x - cell.0).abs() + (c_pos.z - cell.1).abs();
+          if dist < best_dist {
+            best_dist = dist;
+            best_cell = Some(cell);
+          }
+        }
+      }
+      if let Some(target) = best_cell {
+        commands
+          .entity(c_entity)
+          .queue(NavigateTo { target, speed: 3.0 });
+        customer.state = CustomerState::WalkingToRegister;
+        info!("Customer finished eating, heading to register");
+      } else {
+        // Fallback: no register with available zone
+        commands.entity(c_entity).queue(NavigateTo {
+          target: EXIT_POSITION,
+          speed: 3.0,
+        });
+        customer.state = CustomerState::Leaving;
+        info!("Customer finished eating, leaving (no register)");
+      }
     }
   }
 }

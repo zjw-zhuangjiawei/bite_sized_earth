@@ -1,14 +1,15 @@
 pub mod components;
 pub mod construction;
-pub mod customer_lifecycle;
+pub mod customer_ai;
 #[cfg(feature = "dev")]
 pub mod dev_systems;
-pub mod kitchen_workflow;
 pub mod messages;
 pub mod movement;
 pub mod navigation_cmd;
 pub mod pathfinding;
-pub mod register_workflow;
+pub mod slot_spawn;
+pub mod slots;
+pub mod staff_ai;
 pub mod world;
 pub mod zone_helpers;
 
@@ -43,14 +44,15 @@ impl Plugin for SimPlugin {
       ),
     );
 
-    // ── Zone computation (once per new appliance) ──
+    // ── Slot spawning (once per new appliance) ──
     app.add_systems(
       Update,
       (
-        register_workflow::update_register_zones,
-        kitchen_workflow::update_table_zones,
-        kitchen_workflow::update_stove_zones,
-        dev_systems::update_chair_zones,
+        slot_spawn::spawn_table_slots,
+        slot_spawn::spawn_stove_slots,
+        slot_spawn::spawn_register_slots,
+        slot_spawn::spawn_chair_slots,
+        slot_spawn::spawn_initial_queue_slots,
       ),
     );
 
@@ -76,19 +78,22 @@ impl Plugin for SimPlugin {
         movement::agent_movement_tick,
         bevy::ecs::schedule::ApplyDeferred,
         (
-          customer_lifecycle::customer_find_seat_system,
-          customer_lifecycle::customer_arrive_at_seat_system,
-          kitchen_workflow::staff_pickup_system,
-          kitchen_workflow::staff_cooking_system,
+          customer_ai::customer_find_seat,
+          customer_ai::customer_arrive_at_seat,
+          staff_ai::staff_pickup,
+          staff_ai::staff_arrive_at_stove,
         ),
         bevy::ecs::schedule::ApplyDeferred,
         (
-          kitchen_workflow::staff_deliver_system,
-          register_workflow::customer_arrive_at_register_system,
-          customer_lifecycle::customer_eating_system,
-          register_workflow::staff_checkout_system,
-          customer_lifecycle::customer_exit_and_despawn_system,
-          customer_lifecycle::cleanup_table_system,
+          staff_ai::staff_cooking,
+          staff_ai::staff_deliver,
+          customer_ai::customer_arrive_at_queue,
+          customer_ai::customer_eating,
+          staff_ai::staff_checkout_start,
+          staff_ai::staff_arrive_at_checkout,
+          staff_ai::staff_checkout_tick,
+          customer_ai::customer_exit,
+          customer_ai::cleanup_tables,
         ),
       )
         .chain(),

@@ -50,8 +50,7 @@ impl Plugin for ShellPlugin {
           debug_gizmos::draw_agent_path_preview_system,
           debug_gizmos::draw_world_axes,
           debug_gizmos::draw_appliance_direction_gizmos,
-          debug_gizmos::draw_customer_zone_gizmos,
-          debug_gizmos::draw_staff_zone_gizmos,
+          debug_gizmos::draw_slot_gizmos,
         ),
       ),
     );

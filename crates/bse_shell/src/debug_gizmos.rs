@@ -1,7 +1,9 @@
 use crate::dev_console::DevConsoleState;
 use bevy::prelude::*;
-use bse_sim::components::{
-  ApplianceGeometry, CustomerZone, GridPosition, MovementProgress, PathQueue, StaffZone,
+use bse_sim::components::{ApplianceGeometry, GridPosition, MovementProgress, PathQueue};
+use bse_sim::slots::{
+  customer_sit_cell, queue_cell, staff_checkout_cell, staff_cook_cell, staff_deliver_cell,
+  CustomerSitSlot, Occupied, QueueSlot, StaffCheckoutSlot, StaffCookSlot, StaffDeliverSlot,
 };
 
 /// 在 DevConsoleState 的 anchor 位置画一个半透明绿色方块（XZ 平面）
@@ -78,34 +80,54 @@ pub fn draw_appliance_direction_gizmos(
   }
 }
 
-/// Blue filled rectangles for CustomerZone cells.
-pub fn draw_customer_zone_gizmos(query: Query<(&GridPosition, &CustomerZone)>, mut gizmos: Gizmos) {
-  for (_pos, zone) in query.iter() {
-    for &(x, z) in zone.cells.iter() {
-      let half = 0.45;
-      let corners = [
-        Vec3::new(x as f32 - half, 0.12, z as f32 - half),
-        Vec3::new(x as f32 + half, 0.12, z as f32 - half),
-        Vec3::new(x as f32 + half, 0.12, z as f32 + half),
-        Vec3::new(x as f32 - half, 0.12, z as f32 + half),
-      ];
-      gizmos.lineloop(corners, Color::srgba(0.2, 0.4, 1.0, 0.6));
-    }
-  }
-}
+/// Render slot cells with green (free) / red (occupied) color coding.
+pub fn draw_slot_gizmos(
+  slots: Query<(
+    Option<&StaffCookSlot>,
+    Option<&StaffDeliverSlot>,
+    Option<&StaffCheckoutSlot>,
+    Option<&CustomerSitSlot>,
+    Option<&QueueSlot>,
+    Option<&Occupied>,
+    &ChildOf,
+  )>,
+  appliances: Query<(&GridPosition, &ApplianceGeometry)>,
+  mut gizmos: Gizmos,
+) {
+  for (cook, deliver, checkout, sit, queue, occupied, child_of) in slots.iter() {
+    let parent = child_of.parent();
+    let cell: Option<(i32, i32)> = if let Ok((pos, geo)) = appliances.get(parent) {
+      if cook.is_some() {
+        Some(staff_cook_cell((pos.x, pos.z), geo))
+      } else if deliver.is_some() {
+        Some(staff_deliver_cell((pos.x, pos.z), deliver.unwrap().side))
+      } else if checkout.is_some() {
+        Some(staff_checkout_cell((pos.x, pos.z), geo))
+      } else if sit.is_some() {
+        Some(customer_sit_cell((pos.x, pos.z)))
+      } else if let Some(qslot) = queue {
+        Some(queue_cell((pos.x, pos.z), geo, qslot.index))
+      } else {
+        None
+      }
+    } else {
+      None
+    };
 
-/// Green filled rectangles for StaffZone cells.
-pub fn draw_staff_zone_gizmos(query: Query<(&GridPosition, &StaffZone)>, mut gizmos: Gizmos) {
-  for (_pos, zone) in query.iter() {
-    for &(x, z) in zone.cells.iter() {
-      let half = 0.45;
+    if let Some((cx, cz)) = cell {
+      let half = 0.35;
       let corners = [
-        Vec3::new(x as f32 - half, 0.13, z as f32 - half),
-        Vec3::new(x as f32 + half, 0.13, z as f32 - half),
-        Vec3::new(x as f32 + half, 0.13, z as f32 + half),
-        Vec3::new(x as f32 - half, 0.13, z as f32 + half),
+        Vec3::new(cx as f32 - half, 0.13, cz as f32 - half),
+        Vec3::new(cx as f32 + half, 0.13, cz as f32 - half),
+        Vec3::new(cx as f32 + half, 0.13, cz as f32 + half),
+        Vec3::new(cx as f32 - half, 0.13, cz as f32 + half),
       ];
-      gizmos.lineloop(corners, Color::srgba(0.2, 1.0, 0.4, 0.6));
+      let color = if occupied.is_some() {
+        Color::srgba(1.0, 0.2, 0.2, 0.6)
+      } else {
+        Color::srgba(0.2, 1.0, 0.4, 0.6)
+      };
+      gizmos.lineloop(corners, color);
     }
   }
 }

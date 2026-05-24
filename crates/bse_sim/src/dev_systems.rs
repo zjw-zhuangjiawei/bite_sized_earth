@@ -1,6 +1,6 @@
 use crate::components::{
   get_footprint, ApplianceGeometry, BelongsToTable, ChairState, Customer, CustomerState,
-  CustomerZone, GridFootprint, GridPosition, Staff, StaffState, TableState,
+  GridPosition, Staff, StaffState, TableState,
 };
 use crate::messages::{DebugSpawnCustomerRequest, DebugSpawnStaffRequest};
 use crate::world::GridLayers;
@@ -91,17 +91,5 @@ pub fn bind_new_chairs_system(
         break;
       }
     }
-  }
-}
-
-/// Zone system: compute CustomerZone for chairs (chair's own footprint cells).
-pub fn update_chair_zones(
-  mut commands: Commands,
-  query: Query<(Entity, &GridFootprint), (With<ChairState>, Without<CustomerZone>)>,
-) {
-  for (entity, footprint) in query.iter() {
-    commands.entity(entity).insert(CustomerZone {
-      cells: footprint.cells.clone(),
-    });
   }
 }

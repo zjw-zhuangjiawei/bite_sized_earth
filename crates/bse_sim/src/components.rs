@@ -26,16 +26,6 @@ pub struct GridFootprint {
   pub cells: SmallVec<[(i32, i32); 8]>,
 }
 
-#[derive(Component, Debug, Clone)]
-pub struct CustomerZone {
-  pub cells: SmallVec<[(i32, i32); 8]>,
-}
-
-#[derive(Component, Debug, Clone)]
-pub struct StaffZone {
-  pub cells: SmallVec<[(i32, i32); 8]>,
-}
-
 // =========================================================================
 // 2. Movement suite
 // =========================================================================
@@ -99,6 +89,12 @@ pub enum StaffState {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct StaffTarget {
   pub target_table: Entity,
+}
+
+/// Agent is navigating to or occupying a slot entity.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SlotTarget {
+  pub slot: Entity,
 }
 
 // =========================================================================

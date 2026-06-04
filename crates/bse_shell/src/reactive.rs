@@ -4,46 +4,6 @@ use bse_sim::components::{
   RegisterState, Staff, StoveState, TableState,
 };
 
-fn spawn_appliance_mesh(
-  commands: &mut Commands,
-  meshes: &mut ResMut<Assets<Mesh>>,
-  materials: &mut ResMut<Assets<StandardMaterial>>,
-  entity: Entity,
-  pos: &GridPosition,
-  geo: &ApplianceGeometry,
-  height: f32,
-  color: Srgba,
-  y_offset: f32,
-) {
-  let rotation_y = match geo.direction {
-    GridDirection::PosZ => 0.0,
-    GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
-    GridDirection::NegZ => std::f32::consts::PI,
-    GridDirection::PosX => std::f32::consts::FRAC_PI_2,
-  };
-  // World-space grid extents: sx cells along X, sz cells along Z
-  let (sx, sz) = match geo.direction {
-    GridDirection::PosZ | GridDirection::NegZ => (geo.right, geo.forward),
-    GridDirection::PosX | GridDirection::NegX => (geo.forward, geo.right),
-  };
-  let offset_sign = match geo.direction {
-    GridDirection::PosZ | GridDirection::NegX => 1.0,
-    GridDirection::NegZ | GridDirection::PosX => -1.0,
-  };
-  let world_x = pos.x as f32 + offset_sign * (sx as f32 - 1.0) / 2.0;
-  let world_z = pos.z as f32 + offset_sign * (sz as f32 - 1.0) / 2.0;
-
-  commands.entity(entity).insert((
-    Mesh3d(meshes.add(Cuboid::new(sx as f32, height, sz as f32))),
-    MeshMaterial3d(materials.add(StandardMaterial {
-      base_color: Color::Srgba(color),
-      ..default()
-    })),
-    Transform::from_xyz(world_x, y_offset, world_z)
-      .with_rotation(Quat::from_rotation_y(rotation_y)),
-  ));
-}
-
 pub fn render_tables(
   mut commands: Commands,
   assets: Res<AssetServer>,
@@ -117,8 +77,7 @@ pub fn render_chairs(
 
 pub fn render_registers(
   mut commands: Commands,
-  mut meshes: ResMut<Assets<Mesh>>,
-  mut materials: ResMut<Assets<StandardMaterial>>,
+  assets: Res<AssetServer>,
   query: Query<
     (Entity, &GridPosition, &ApplianceGeometry),
     (
@@ -129,41 +88,70 @@ pub fn render_registers(
   >,
 ) {
   for (entity, pos, geo) in query.iter() {
-    spawn_appliance_mesh(
-      &mut commands,
-      &mut meshes,
-      &mut materials,
-      entity,
-      pos,
-      geo,
-      0.8,
-      Srgba::new(0.4, 0.2, 0.1, 1.0),
-      0.4,
-    );
+    let rotation_y = match geo.direction {
+      GridDirection::PosZ => 0.0,
+      GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
+      GridDirection::NegZ => std::f32::consts::PI,
+      GridDirection::PosX => std::f32::consts::FRAC_PI_2,
+    };
+    // 2x1 footprint: center vox over long axis. right=2 along appliance's
+    // local "right" → world axis depends on direction.
+    let (sx, sz) = match geo.direction {
+      GridDirection::PosZ | GridDirection::NegZ => (geo.right, geo.forward),
+      GridDirection::PosX | GridDirection::NegX => (geo.forward, geo.right),
+    };
+    let offset_sign = match geo.direction {
+      GridDirection::PosZ | GridDirection::NegX => 1.0,
+      GridDirection::NegZ | GridDirection::PosX => -1.0,
+    };
+    let world_x = pos.x as f32 + offset_sign * (sx as f32 - 1.0) / 2.0;
+    let world_z = pos.z as f32 + offset_sign * (sz as f32 - 1.0) / 2.0;
+    // register.vox is 64x32x32 (2:1:1) → fits 2x1 footprint uniformly.
+    // bevy_vox_scene remap: bevy_x=vox_x (mirrored), bevy_y=vox_z (up), bevy_z=vox_y (depth).
+    let scale = 1.0 / 32.0;
+    commands.entity(entity).insert((
+      SceneRoot(assets.load("register.vox")),
+      Transform::from_xyz(world_x, 0.0, world_z)
+        .with_scale(Vec3::splat(scale))
+        .with_rotation(Quat::from_rotation_y(rotation_y)),
+    ));
   }
 }
 
 pub fn render_stoves(
   mut commands: Commands,
-  mut meshes: ResMut<Assets<Mesh>>,
-  mut materials: ResMut<Assets<StandardMaterial>>,
+  assets: Res<AssetServer>,
   query: Query<
     (Entity, &GridPosition, &ApplianceGeometry),
     (Added<ApplianceGeometry>, With<StoveState>, Without<Mesh3d>),
   >,
 ) {
   for (entity, pos, geo) in query.iter() {
-    spawn_appliance_mesh(
-      &mut commands,
-      &mut meshes,
-      &mut materials,
-      entity,
-      pos,
-      geo,
-      0.4,
-      Srgba::new(0.15, 0.15, 0.15, 1.0),
-      0.2,
-    );
+    let rotation_y = match geo.direction {
+      GridDirection::PosZ => 0.0,
+      GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
+      GridDirection::NegZ => std::f32::consts::PI,
+      GridDirection::PosX => std::f32::consts::FRAC_PI_2,
+    };
+    // 2x1 footprint: center vox over long axis.
+    let (sx, sz) = match geo.direction {
+      GridDirection::PosZ | GridDirection::NegZ => (geo.right, geo.forward),
+      GridDirection::PosX | GridDirection::NegX => (geo.forward, geo.right),
+    };
+    let offset_sign = match geo.direction {
+      GridDirection::PosZ | GridDirection::NegX => 1.0,
+      GridDirection::NegZ | GridDirection::PosX => -1.0,
+    };
+    let world_x = pos.x as f32 + offset_sign * (sx as f32 - 1.0) / 2.0;
+    let world_z = pos.z as f32 + offset_sign * (sz as f32 - 1.0) / 2.0;
+    // stove.vox is 64x32x32 (2:1:1) → fits 2x1 footprint uniformly.
+    let scale = 1.0 / 32.0;
+    commands.entity(entity).insert((
+      SceneRoot(assets.load("stove.vox")),
+      Transform::from_xyz(world_x, 0.0, world_z)
+        .with_scale(Vec3::splat(scale))
+        .with_rotation(Quat::from_rotation_y(rotation_y)),
+    ));
   }
 }
 

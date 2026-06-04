@@ -190,3 +190,28 @@ pub fn handle_demolish_appliance(
     }
   }
 }
+
+// =============================================================================
+// Plugin
+// =============================================================================
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub struct ConstructionSet;
+
+pub struct ConstructionPlugin;
+
+impl Plugin for ConstructionPlugin {
+  fn build(&self, app: &mut App) {
+    app.add_systems(
+      Update,
+      (
+        handle_place_table,
+        handle_place_chair,
+        handle_place_register,
+        handle_place_stove,
+        handle_demolish_appliance,
+      )
+        .in_set(ConstructionSet),
+    );
+  }
+}

@@ -18,6 +18,9 @@ use bevy::prelude::*;
 use std::collections::VecDeque;
 use world::GridLayers;
 
+use crate::construction::{ConstructionPlugin, ConstructionSet};
+use crate::slot_spawn::{SlotSpawnPlugin, SlotSpawnSet};
+
 #[derive(Resource, Default)]
 pub struct OrderQueue {
   pub pending: VecDeque<Entity>,
@@ -28,45 +31,30 @@ pub struct SimPlugin;
 impl Plugin for SimPlugin {
   fn build(&self, app: &mut App) {
     messages::register_all(app);
+
+    // Resources
+    app.insert_resource(GridLayers::new(32, 32));
     app.insert_resource(OrderQueue::default());
 
-    // Startup
-    app.add_systems(Startup, (init_grid_layers, slot_spawn::spawn_exit_slot));
+    // Sub-plugins (slot_spawn::spawn_exit_slot registered inside SlotSpawnPlugin::build)
+    app.add_plugins((ConstructionPlugin, SlotSpawnPlugin));
 
-    // ── Construction phase ──
-    app.add_systems(
+    // Cross-plugin ordering
+    app.configure_sets(
       Update,
       (
-        construction::handle_place_table,
-        construction::handle_place_chair,
-        construction::handle_place_register,
-        construction::handle_place_stove,
-        construction::handle_demolish_appliance,
-      ),
-    );
-
-    // ── Slot spawning + offset insertion ──
-    app.add_systems(
-      Update,
-      (
-        (
-          slot_spawn::spawn_table_slots,
-          slot_spawn::spawn_stove_slots,
-          slot_spawn::spawn_register_slots,
-          slot_spawn::spawn_chair_slots,
-          slot_spawn::spawn_initial_queue_slots,
-        ),
-        bevy::ecs::schedule::ApplyDeferred,
-        (
-          slot_spawn::insert_cook_offset,
-          slot_spawn::insert_deliver_offset,
-          slot_spawn::insert_checkout_offset,
-          slot_spawn::insert_sit_offset,
-          slot_spawn::insert_queue_offset,
-        ),
-        slot_spawn::reindex_queue_slots,
+        ConstructionSet,
+        SlotSpawnSet::Spawn,
+        SlotSpawnSet::InsertOffset,
+        SlotSpawnSet::Reindex,
       )
         .chain(),
+    );
+    app.add_systems(
+      Update,
+      bevy::ecs::schedule::ApplyDeferred
+        .after(SlotSpawnSet::Spawn)
+        .before(SlotSpawnSet::InsertOffset),
     );
 
     // ── Dev-only spawning ──
@@ -115,8 +103,4 @@ impl Plugin for SimPlugin {
         .chain(),
     );
   }
-}
-
-fn init_grid_layers(mut commands: Commands) {
-  commands.insert_resource(GridLayers::new(32, 32));
 }

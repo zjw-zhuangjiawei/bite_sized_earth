@@ -365,3 +365,45 @@ pub fn shrink_queue_slots(
     }
   }
 }
+
+// =============================================================================
+// Plugin
+// =============================================================================
+
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub enum SlotSpawnSet {
+  Spawn,
+  InsertOffset,
+  Reindex,
+}
+
+pub struct SlotSpawnPlugin;
+
+impl Plugin for SlotSpawnPlugin {
+  fn build(&self, app: &mut App) {
+    app.add_systems(Startup, spawn_exit_slot);
+
+    app.add_systems(
+      Update,
+      (
+        (
+          spawn_table_slots,
+          spawn_stove_slots,
+          spawn_register_slots,
+          spawn_initial_queue_slots,
+          spawn_chair_slots,
+        )
+          .in_set(SlotSpawnSet::Spawn),
+        (
+          insert_cook_offset,
+          insert_deliver_offset,
+          insert_checkout_offset,
+          insert_sit_offset,
+          insert_queue_offset,
+        )
+          .in_set(SlotSpawnSet::InsertOffset),
+        reindex_queue_slots.in_set(SlotSpawnSet::Reindex),
+      ),
+    );
+  }
+}

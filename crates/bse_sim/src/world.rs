@@ -15,6 +15,41 @@ pub enum GridLayer {
   Surface,
 }
 
+/// How long a reservation lives.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum ReservationDuration {
+  /// Decays by 1 each tick, removed at 0.
+  Timed(u8),
+  /// Persists until explicitly released.
+  Permanent,
+}
+
+/// A cell reservation for dynamic obstacle avoidance.
+#[derive(Clone, Debug)]
+pub struct ReservationEntry {
+  pub entity: Entity,
+  pub duration: ReservationDuration,
+  pub intent: CellIntent,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum CellIntent {
+  /// Agent intends to move here but hasn't entered yet. Can be bumped.
+  Intend,
+  /// Agent is actively passing through to the next cell.
+  Transient,
+  /// Agent is stationary in this cell, highest priority.
+  Occupy,
+}
+
+/// Result of attempting to reserve a cell.
+#[derive(Debug)]
+pub enum ReserveResult {
+  Claimed,
+  Blocked,
+  Preempted(Entity),
+}
+
 /// Flat-array spatial index.  One parallel array per layer, O(1) array lookup, no heap fragmentation.
 #[derive(Resource)]
 pub struct GridLayers {
@@ -24,7 +59,7 @@ pub struct GridLayers {
   ceiling: Vec<Option<Entity>>,
   surface: Vec<SmallVec<[Entity; 4]>>,
   /// Dynamic-agent reservation.  Checked alongside `floor` in `is_walkable`.
-  reserved: Vec<Option<Entity>>,
+  reserved: Vec<Option<ReservationEntry>>,
 }
 
 impl GridLayers {
@@ -131,13 +166,20 @@ impl GridLayers {
     if self.reserved[i].is_some() {
       return false;
     }
-    self.reserved[i] = Some(entity);
+    self.reserved[i] = Some(ReservationEntry {
+      entity,
+      duration: ReservationDuration::Permanent,
+      intent: CellIntent::Occupy,
+    });
     true
   }
 
   pub fn release_cell(&mut self, x: i32, z: i32, entity: Entity) {
     if let Some(i) = self.index(x, z) {
-      if self.reserved[i] == Some(entity) {
+      if self.reserved[i]
+        .as_ref()
+        .map_or(false, |r| r.entity == entity)
+      {
         self.reserved[i] = None;
       }
     }
@@ -146,9 +188,27 @@ impl GridLayers {
   /// Release every cell currently reserved by `entity`.
   pub fn release_all(&mut self, entity: Entity) {
     for slot in self.reserved.iter_mut() {
-      if *slot == Some(entity) {
+      if slot.as_ref().map_or(false, |r| r.entity == entity) {
         *slot = None;
       }
+    }
+  }
+
+  /// Upgrade an existing reservation to Permanent (e.g. on arrival at destination).
+  pub fn make_permanent(&mut self, x: i32, z: i32, entity: Entity) -> bool {
+    let Some(i) = self.index(x, z) else {
+      return false;
+    };
+    match &self.reserved[i] {
+      Some(entry) if entry.entity == entity => {
+        self.reserved[i] = Some(ReservationEntry {
+          entity,
+          duration: ReservationDuration::Permanent,
+          intent: CellIntent::Occupy,
+        });
+        true
+      }
+      _ => false,
     }
   }
 
@@ -161,4 +221,100 @@ impl GridLayers {
       self.floor[i].is_none() && self.reserved[i].is_none()
     })
   }
+
+  /// Like `is_walkable` but excludes the given entity's own reservations.
+  pub fn is_walkable_for(&self, x: i32, z: i32, entity: Entity) -> bool {
+    self.index(x, z).map_or(false, |i| {
+      self.floor[i].is_none()
+        && self.reserved[i]
+          .as_ref()
+          .map_or(true, |r| r.entity == entity)
+    })
+  }
+
+  /// Atomic check-and-claim with priority.  Computes TTL from speed.
+  pub fn try_reserve(
+    &mut self,
+    x: i32,
+    z: i32,
+    entity: Entity,
+    intent: CellIntent,
+    speed: f32,
+    tick_delta: f32,
+  ) -> ReserveResult {
+    let Some(i) = self.index(x, z) else {
+      return ReserveResult::Blocked;
+    };
+    if speed <= 0.0 || tick_delta <= 0.0 {
+      return ReserveResult::Blocked;
+    }
+    let ttl = (1.0 / speed / tick_delta).ceil() as u8;
+
+    match &self.reserved[i] {
+      None => {
+        self.reserved[i] = Some(ReservationEntry {
+          entity,
+          duration: ReservationDuration::Timed(ttl),
+          intent,
+        });
+        ReserveResult::Claimed
+      }
+      Some(existing) if existing.entity == entity => {
+        // Already ours — refresh TTL
+        self.reserved[i] = Some(ReservationEntry {
+          entity,
+          duration: ReservationDuration::Timed(ttl),
+          intent,
+        });
+        ReserveResult::Claimed
+      }
+      Some(existing) => {
+        // Priority: higher intent + higher entity low-bits as tiebreak
+        let our_priority = priority_value(entity, intent);
+        let their_priority = priority_value(existing.entity, existing.intent);
+        if our_priority > their_priority {
+          let bumped = existing.entity;
+          self.reserved[i] = Some(ReservationEntry {
+            entity,
+            duration: ReservationDuration::Timed(ttl),
+            intent,
+          });
+          ReserveResult::Preempted(bumped)
+        } else {
+          ReserveResult::Blocked
+        }
+      }
+    }
+  }
+
+  /// Decay all TTLs, expire stale reservations.
+  pub fn tick_reservations(&mut self) {
+    for entry in self.reserved.iter_mut() {
+      let mut should_clear = false;
+      if let Some(r) = entry {
+        match r.duration {
+          ReservationDuration::Timed(ref mut ttl) => {
+            *ttl = ttl.saturating_sub(1);
+            if *ttl == 0 {
+              should_clear = true;
+            }
+          }
+          ReservationDuration::Permanent => {}
+        }
+      }
+      if should_clear {
+        *entry = None;
+      }
+    }
+  }
+}
+
+fn priority_value(entity: Entity, intent: CellIntent) -> u8 {
+  let base = match intent {
+    CellIntent::Occupy => 3,
+    CellIntent::Transient => 2,
+    CellIntent::Intend => 1,
+  };
+  // Use low 4 bits of entity ID as tiebreaker (stable, deterministic)
+  (base << 4) | (entity.to_bits() as u8 & 0x0F)
 }

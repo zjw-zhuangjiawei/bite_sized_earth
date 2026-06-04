@@ -22,6 +22,10 @@ pub struct QueueSlot {
   pub index: usize,
 }
 
+/// A fixed-position slot at the exit point.  Customers navigate here when leaving.
+#[derive(Component)]
+pub struct ExitSlot;
+
 // === Slot state ===
 
 /// Slot is currently occupied by an agent. Absent = free.
@@ -66,25 +70,23 @@ pub fn customer_sit_cell(chair_pos: (i32, i32)) -> (i32, i32) {
   (chair_pos.0, chair_pos.1)
 }
 
-/// Queue cell: L-shaped line from register. First 2 cells go right from front-right corner,
-/// then forward for remaining indices.
+/// Queue cell: 1-wide line in front of register, aligned laterally with the
+/// staff checkout cell. Extends forward from the front of the register.
 pub fn queue_cell(reg_pos: (i32, i32), geo: &ApplianceGeometry, index: usize) -> (i32, i32) {
-  let (rdx, rdz, fdx, fdz) = match geo.direction {
-    GridDirection::PosZ => (1, 0, 0, 1),
-    GridDirection::NegZ => (-1, 0, 0, -1),
-    GridDirection::PosX => (0, -1, 1, 0),
-    GridDirection::NegX => (0, 1, -1, 0),
+  let (start_dx, start_dz) = match geo.direction {
+    GridDirection::PosZ => (geo.right / 2, 1),
+    GridDirection::NegZ => (geo.right / 2, -1),
+    GridDirection::PosX => (1, geo.right / 2),
+    GridDirection::NegX => (-1, geo.right / 2),
   };
-  let frx = reg_pos.0 + rdx * (geo.right as i32 - 1);
-  let frz = reg_pos.1 + rdz * (geo.right as i32 - 1);
-
+  let (fdx, fdz) = match geo.direction {
+    GridDirection::PosZ => (0, 1),
+    GridDirection::NegZ => (0, -1),
+    GridDirection::PosX => (1, 0),
+    GridDirection::NegX => (-1, 0),
+  };
+  let start_x = reg_pos.0 + start_dx;
+  let start_z = reg_pos.1 + start_dz;
   let idx = index as i32;
-  if idx < 2 {
-    (frx + rdx * (idx + 1), frz + rdz * (idx + 1))
-  } else {
-    let ex = frx + rdx * 2;
-    let ez = frz + rdz * 2;
-    let fwd = (idx - 2) + 1;
-    (ex + fdx * fwd, ez + fdz * fwd)
-  }
+  (start_x + fdx * idx, start_z + fdz * idx)
 }

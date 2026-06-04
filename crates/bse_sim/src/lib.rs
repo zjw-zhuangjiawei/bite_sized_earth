@@ -3,6 +3,7 @@ pub mod construction;
 pub mod customer_ai;
 #[cfg(feature = "dev")]
 pub mod dev_systems;
+pub mod local_nav;
 pub mod messages;
 pub mod movement;
 pub mod navigation_cmd;
@@ -30,7 +31,7 @@ impl Plugin for SimPlugin {
     app.insert_resource(OrderQueue::default());
 
     // Startup
-    app.add_systems(Startup, init_grid_layers);
+    app.add_systems(Startup, (init_grid_layers, slot_spawn::spawn_exit_slot));
 
     // ── Construction phase ──
     app.add_systems(
@@ -44,16 +45,28 @@ impl Plugin for SimPlugin {
       ),
     );
 
-    // ── Slot spawning (once per new appliance) ──
+    // ── Slot spawning + offset insertion ──
     app.add_systems(
       Update,
       (
-        slot_spawn::spawn_table_slots,
-        slot_spawn::spawn_stove_slots,
-        slot_spawn::spawn_register_slots,
-        slot_spawn::spawn_chair_slots,
-        slot_spawn::spawn_initial_queue_slots,
-      ),
+        (
+          slot_spawn::spawn_table_slots,
+          slot_spawn::spawn_stove_slots,
+          slot_spawn::spawn_register_slots,
+          slot_spawn::spawn_chair_slots,
+          slot_spawn::spawn_initial_queue_slots,
+        ),
+        bevy::ecs::schedule::ApplyDeferred,
+        (
+          slot_spawn::insert_cook_offset,
+          slot_spawn::insert_deliver_offset,
+          slot_spawn::insert_checkout_offset,
+          slot_spawn::insert_sit_offset,
+          slot_spawn::insert_queue_offset,
+        ),
+        slot_spawn::reindex_queue_slots,
+      )
+        .chain(),
     );
 
     // ── Dev-only spawning ──
@@ -75,6 +88,7 @@ impl Plugin for SimPlugin {
     app.add_systems(
       Update,
       (
+        movement::agent_replan,
         movement::agent_movement_tick,
         bevy::ecs::schedule::ApplyDeferred,
         (
@@ -88,6 +102,8 @@ impl Plugin for SimPlugin {
           staff_ai::staff_cooking,
           staff_ai::staff_deliver,
           customer_ai::customer_arrive_at_queue,
+          slot_spawn::shrink_queue_slots,
+          slot_spawn::ensure_next_queue_slot,
           customer_ai::customer_eating,
           staff_ai::staff_checkout_start,
           staff_ai::staff_arrive_at_checkout,

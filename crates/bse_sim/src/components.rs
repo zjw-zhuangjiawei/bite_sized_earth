@@ -16,6 +16,18 @@ pub struct GridPosition {
   pub z: i32,
 }
 
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SlotOffset {
+  pub dx: i32,
+  pub dz: i32,
+}
+
+#[derive(Component, Debug, Clone, Copy)]
+pub struct SlotPosition {
+  pub x: i32,
+  pub z: i32,
+}
+
 /// Which layer this entity belongs to (placed by construction handlers).
 pub use crate::world::GridLayer;
 
@@ -44,7 +56,31 @@ pub struct MovementProgress {
 }
 
 #[derive(Component, Debug, Clone, Copy)]
-pub struct NavigationComplete;
+pub struct NavigationComplete {
+  pub failed: bool,
+}
+
+/// Agent is navigating toward this slot entity.
+/// The movement system reads the slot's GridPosition each tick.
+#[derive(Component, Debug, Clone, Copy)]
+pub struct NavTarget {
+  pub slot: Entity,
+}
+
+/// Local navigation state machine.
+#[derive(Component, Debug, Default)]
+pub enum NavState {
+  #[default]
+  Cruising,
+  Blocked {
+    ticks: u32,
+  },
+  FallbackBFS,
+}
+
+/// Marker: agent needs A* fallback from current position to NavTarget.
+#[derive(Component, Debug)]
+pub struct ReplanRequest;
 
 // =========================================================================
 // 3. Interaction
@@ -196,7 +232,7 @@ pub struct BelongsToTable {
 
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SeatedAt {
-  pub chair: Entity,
+  pub sit_slot: Entity,
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default)]

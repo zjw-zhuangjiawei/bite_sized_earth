@@ -5,11 +5,13 @@ pub mod dev_console;
 pub mod environment;
 pub mod input;
 pub mod reactive;
+pub mod vox;
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use bevy_enhanced_input::EnhancedInputPlugin;
-use bevy_vox_scene::VoxScenePlugin;
+
+use vox::VoxLoaderPlugin;
 
 #[cfg(feature = "dev")]
 use bevy_egui::EguiPrimaryContextPass;
@@ -24,7 +26,7 @@ impl Plugin for ShellPlugin {
   fn build(&self, app: &mut App) {
     app.add_plugins(EguiPlugin::default());
     app.add_plugins(EnhancedInputPlugin);
-    app.add_plugins(VoxScenePlugin::default());
+    app.add_plugins(VoxLoaderPlugin);
     app.add_plugins(CameraControlPlugin);
 
     #[cfg(feature = "dev")]

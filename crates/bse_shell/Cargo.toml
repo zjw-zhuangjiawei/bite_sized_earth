@@ -10,5 +10,6 @@ dev = ["bse_sim/dev"]
 bevy = { workspace = true }
 bevy_egui = "0.39"
 bevy_enhanced_input = "0.25"
-bevy_vox_scene = "0.21"
+dot_vox = "5.2"
+thiserror = "2"
 bse_sim = { workspace = true }

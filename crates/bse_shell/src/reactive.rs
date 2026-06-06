@@ -4,6 +4,8 @@ use bse_sim::components::{
   RegisterState, Staff, StoveState, TableState,
 };
 
+use crate::vox::VoxelAssetHandle;
+
 pub fn render_tables(
   mut commands: Commands,
   assets: Res<AssetServer>,
@@ -21,7 +23,7 @@ pub fn render_tables(
     };
     let scale = 1.0 / 16.0;
     commands.entity(entity).insert((
-      SceneRoot(assets.load("table.vox")),
+      VoxelAssetHandle(assets.load("table.vox")),
       Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
         .with_scale(Vec3::splat(scale))
         .with_rotation(Quat::from_rotation_y(rotation_y)),
@@ -110,7 +112,7 @@ pub fn render_registers(
     // bevy_vox_scene remap: bevy_x=vox_x (mirrored), bevy_y=vox_z (up), bevy_z=vox_y (depth).
     let scale = 1.0 / 32.0;
     commands.entity(entity).insert((
-      SceneRoot(assets.load("register.vox")),
+      VoxelAssetHandle(assets.load("register.vox")),
       Transform::from_xyz(world_x, 0.0, world_z)
         .with_scale(Vec3::splat(scale))
         .with_rotation(Quat::from_rotation_y(rotation_y)),
@@ -147,7 +149,7 @@ pub fn render_stoves(
     // stove.vox is 64x32x32 (2:1:1) → fits 2x1 footprint uniformly.
     let scale = 1.0 / 32.0;
     commands.entity(entity).insert((
-      SceneRoot(assets.load("stove.vox")),
+      VoxelAssetHandle(assets.load("stove.vox")),
       Transform::from_xyz(world_x, 0.0, world_z)
         .with_scale(Vec3::splat(scale))
         .with_rotation(Quat::from_rotation_y(rotation_y)),

@@ -40,7 +40,7 @@ pub fn staff_pickup(
     let mut best_dist = i32::MAX;
 
     for (slot_entity, slot_pos) in cook_slots.iter() {
-      let dist = (staff_pos.x - slot_pos.x).abs() + (staff_pos.z - slot_pos.z).abs();
+      let dist = (staff_pos.x - slot_pos.x).abs() + (staff_pos.y - slot_pos.y).abs();
       if dist < best_dist {
         best_dist = dist;
         best = Some(slot_entity);
@@ -67,7 +67,7 @@ pub fn staff_pickup(
 
     info!(
       "Staff at ({},{}) heading to stove slot for table {:?}",
-      staff_pos.x, staff_pos.z, table_entity
+      staff_pos.x, staff_pos.y, table_entity
     );
   }
 }
@@ -207,7 +207,7 @@ pub fn staff_deliver(
       commands
         .entity(staff_entity)
         .remove::<(SlotTarget, StaffTarget, NavigationComplete)>();
-      grid.release_cell(staff_pos.x, staff_pos.z, staff_entity);
+      grid.release_cell(staff_pos.x, staff_pos.y, staff_entity);
       staff.state = StaffState::Idle;
       continue;
     }
@@ -217,7 +217,7 @@ pub fn staff_deliver(
       .entity(staff_entity)
       .remove::<(SlotTarget, StaffTarget, NavigationComplete)>();
 
-    grid.release_cell(staff_pos.x, staff_pos.z, staff_entity);
+    grid.release_cell(staff_pos.x, staff_pos.y, staff_entity);
 
     if let Ok(mut ts) = table_q.get_mut(task.target_table) {
       *ts = TableState::Served;
@@ -271,7 +271,7 @@ pub fn staff_checkout_start(
       if !busy_regs.contains(&reg_entity) {
         continue;
       }
-      let dist = (staff_pos.x - slot_pos.x).abs() + (staff_pos.z - slot_pos.z).abs();
+      let dist = (staff_pos.x - slot_pos.x).abs() + (staff_pos.y - slot_pos.y).abs();
       if dist == 0 {
         // Staff already at this slot — would A* into a length-1 path and
         // never move. Skip and let it do something else.
@@ -412,7 +412,7 @@ pub fn staff_checkout_tick(
       // Release the checkout cell so the staff can be re-dispatched (or other
       // agents can A* through it) — without this, the cell stays permanently
       // occupied and a re-dispatch A*'s a length-1 path that never moves.
-      grid.release_cell(slot_pos.x, slot_pos.z, staff_entity);
+      grid.release_cell(slot_pos.x, slot_pos.y, staff_entity);
       staff.state = StaffState::Idle;
 
       info!("Staff {:?} finished checkout, now Idle", staff_entity);

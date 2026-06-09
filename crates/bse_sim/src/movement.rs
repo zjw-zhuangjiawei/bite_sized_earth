@@ -2,7 +2,7 @@ use crate::components::{
   GridPosition, MovementProgress, NavState, NavTarget, NavigationComplete, PathQueue,
   ReplanRequest, SlotPosition,
 };
-use crate::local_nav::{local_step, StepResult};
+use crate::local_nav::{StepResult, local_step};
 use crate::world::{CellIntent, GridLayers, ReserveResult};
 use bevy::prelude::*;
 
@@ -41,11 +41,11 @@ pub fn agent_movement_tick(
     // Arrived at a cell — release previous and update position
     grid.release_cell(movement.from.0, movement.from.1, entity);
     grid_pos.x = movement.to.0;
-    grid_pos.z = movement.to.1;
-    debug!("Move: arrived at ({},{})", grid_pos.x, grid_pos.z);
+    grid_pos.y = movement.to.1;
+    debug!("Move: arrived at ({},{})", grid_pos.x, grid_pos.y);
 
     // Read target slot's grid position
-    let target_pos = slot_positions.get(nav_target.slot).ok().map(|p| (p.x, p.z));
+    let target_pos = slot_positions.get(nav_target.slot).ok().map(|p| (p.x, p.y));
 
     // If slot is gone, trigger replan
     let Some(target) = target_pos else {
@@ -54,9 +54,9 @@ pub fn agent_movement_tick(
     };
 
     // Check if we've reached the target slot
-    if (grid_pos.x, grid_pos.z) == target {
+    if (grid_pos.x, grid_pos.y) == target {
       debug!("Move: reached target slot {:?}", nav_target.slot);
-      grid.make_permanent(grid_pos.x, grid_pos.z, entity);
+      grid.make_permanent(grid_pos.x, grid_pos.y, entity);
       commands
         .entity(entity)
         .remove::<(MovementProgress, PathQueue, NavState)>()
@@ -76,7 +76,7 @@ pub fn agent_movement_tick(
       ) {
         ReserveResult::Claimed | ReserveResult::Preempted(_) => {
           // Normal advance
-          movement.from = (grid_pos.x, grid_pos.z);
+          movement.from = (grid_pos.x, grid_pos.y);
           movement.to = next;
           movement.progress = 0.0;
           *nav_state = NavState::Cruising;
@@ -92,14 +92,14 @@ pub fn agent_movement_tick(
           path_queue.path.push_front(next);
           match local_step(
             entity,
-            (grid_pos.x, grid_pos.z),
+            (grid_pos.x, grid_pos.y),
             target,
             movement.speed,
             &mut grid,
             delta,
           ) {
             StepResult::Advance { to } => {
-              movement.from = (grid_pos.x, grid_pos.z);
+              movement.from = (grid_pos.x, grid_pos.y);
               movement.to = to;
               movement.progress = 0.0;
               *nav_state = NavState::Cruising;
@@ -128,9 +128,9 @@ pub fn agent_movement_tick(
           }
         }
       }
-    } else if (grid_pos.x, grid_pos.z) == target {
+    } else if (grid_pos.x, grid_pos.y) == target {
       // Path consumed and at target
-      grid.make_permanent(grid_pos.x, grid_pos.z, entity);
+      grid.make_permanent(grid_pos.x, grid_pos.y, entity);
       commands
         .entity(entity)
         .remove::<(MovementProgress, PathQueue, NavState)>()
@@ -164,7 +164,7 @@ pub fn agent_replan(
   >,
 ) {
   for (entity, pos, nav_target, mut movement, mut path_queue) in query.iter_mut() {
-    let Some(target_pos) = slot_positions.get(nav_target.slot).ok().map(|p| (p.x, p.z)) else {
+    let Some(target_pos) = slot_positions.get(nav_target.slot).ok().map(|p| (p.x, p.y)) else {
       // Slot is gone — give up
       commands.entity(entity).remove::<ReplanRequest>();
       commands
@@ -174,7 +174,7 @@ pub fn agent_replan(
       continue;
     };
 
-    let start = (pos.x, pos.z);
+    let start = (pos.x, pos.y);
     let path = crate::pathfinding::compute_agent_path(start, target_pos, &grid);
 
     let Some(path) = path else {

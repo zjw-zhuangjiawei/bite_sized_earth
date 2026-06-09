@@ -75,11 +75,11 @@ impl GridLayers {
     }
   }
 
-  fn index(&self, x: i32, z: i32) -> Option<usize> {
-    if x < 0 || x >= self.width || z < 0 || z >= self.height {
+  fn index(&self, x: i32, y: i32) -> Option<usize> {
+    if x < 0 || x >= self.width || y < 0 || y >= self.height {
       return None;
     }
-    Some((z * self.width + x) as usize)
+    Some((y * self.width + x) as usize)
   }
 
   // ── Floor ──────────────────────────────────────────────
@@ -87,12 +87,12 @@ impl GridLayers {
   pub fn try_place_floor(&mut self, cells: &[Cell], entity: Entity) -> bool {
     if cells
       .iter()
-      .any(|&(x, z)| self.index(x, z).map_or(true, |i| self.floor[i].is_some()))
+      .any(|&(x, y)| self.index(x, y).map_or(true, |i| self.floor[i].is_some()))
     {
       return false;
     }
-    for &(x, z) in cells {
-      if let Some(i) = self.index(x, z) {
+    for &(x, y) in cells {
+      if let Some(i) = self.index(x, y) {
         self.floor[i] = Some(entity);
       }
     }
@@ -100,8 +100,8 @@ impl GridLayers {
   }
 
   pub fn remove_floor(&mut self, cells: &[Cell], entity: Entity) {
-    for &(x, z) in cells {
-      if let Some(i) = self.index(x, z) {
+    for &(x, y) in cells {
+      if let Some(i) = self.index(x, y) {
         if self.floor[i] == Some(entity) {
           self.floor[i] = None;
         }
@@ -109,15 +109,15 @@ impl GridLayers {
     }
   }
 
-  pub fn floor_entity_at(&self, x: i32, z: i32) -> Option<Entity> {
-    self.index(x, z).and_then(|i| self.floor[i])
+  pub fn floor_entity_at(&self, x: i32, y: i32) -> Option<Entity> {
+    self.index(x, y).and_then(|i| self.floor[i])
   }
 
   /// 4-neighbor floor entities (used by interaction-point refresh).
-  pub fn floor_neighbors(&self, x: i32, z: i32) -> impl Iterator<Item = Entity> + '_ {
+  pub fn floor_neighbors(&self, x: i32, y: i32) -> impl Iterator<Item = Entity> + '_ {
     [(1, 0), (-1, 0), (0, 1), (0, -1)]
       .into_iter()
-      .filter_map(move |(dx, dz)| self.floor_entity_at(x + dx, z + dz))
+      .filter_map(move |(dx, dy)| self.floor_entity_at(x + dx, y + dy))
   }
 
   // ── Ceiling ────────────────────────────────────────────
@@ -159,8 +159,8 @@ impl GridLayers {
 
   // ── Reservation ────────────────────────────────────────
 
-  pub fn reserve_cell(&mut self, x: i32, z: i32, entity: Entity) -> bool {
-    let Some(i) = self.index(x, z) else {
+  pub fn reserve_cell(&mut self, x: i32, y: i32, entity: Entity) -> bool {
+    let Some(i) = self.index(x, y) else {
       return false;
     };
     if self.reserved[i].is_some() {
@@ -174,8 +174,8 @@ impl GridLayers {
     true
   }
 
-  pub fn release_cell(&mut self, x: i32, z: i32, entity: Entity) {
-    if let Some(i) = self.index(x, z) {
+  pub fn release_cell(&mut self, x: i32, y: i32, entity: Entity) {
+    if let Some(i) = self.index(x, y) {
       if self.reserved[i]
         .as_ref()
         .map_or(false, |r| r.entity == entity)
@@ -195,8 +195,8 @@ impl GridLayers {
   }
 
   /// Upgrade an existing reservation to Permanent (e.g. on arrival at destination).
-  pub fn make_permanent(&mut self, x: i32, z: i32, entity: Entity) -> bool {
-    let Some(i) = self.index(x, z) else {
+  pub fn make_permanent(&mut self, x: i32, y: i32, entity: Entity) -> bool {
+    let Some(i) = self.index(x, y) else {
       return false;
     };
     match &self.reserved[i] {
@@ -216,15 +216,15 @@ impl GridLayers {
 
   /// A cell is walkable when it is inside bounds and neither the floor layer
   /// nor the reservation layer blocks it.
-  pub fn is_walkable(&self, x: i32, z: i32) -> bool {
-    self.index(x, z).map_or(false, |i| {
+  pub fn is_walkable(&self, x: i32, y: i32) -> bool {
+    self.index(x, y).map_or(false, |i| {
       self.floor[i].is_none() && self.reserved[i].is_none()
     })
   }
 
   /// Like `is_walkable` but excludes the given entity's own reservations.
-  pub fn is_walkable_for(&self, x: i32, z: i32, entity: Entity) -> bool {
-    self.index(x, z).map_or(false, |i| {
+  pub fn is_walkable_for(&self, x: i32, y: i32, entity: Entity) -> bool {
+    self.index(x, y).map_or(false, |i| {
       self.floor[i].is_none()
         && self.reserved[i]
           .as_ref()
@@ -236,13 +236,13 @@ impl GridLayers {
   pub fn try_reserve(
     &mut self,
     x: i32,
-    z: i32,
+    y: i32,
     entity: Entity,
     intent: CellIntent,
     speed: f32,
     tick_delta: f32,
   ) -> ReserveResult {
-    let Some(i) = self.index(x, z) else {
+    let Some(i) = self.index(x, y) else {
       return ReserveResult::Blocked;
     };
     if speed <= 0.0 || tick_delta <= 0.0 {

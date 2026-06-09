@@ -7,14 +7,14 @@ use crate::world::GridLayer;
 #[derive(Message, Debug)]
 pub struct DebugSpawnStaffRequest {
   pub grid_x: i32,
-  pub grid_z: i32,
+  pub grid_y: i32,
 }
 
 #[cfg(feature = "dev")]
 #[derive(Message, Debug)]
 pub struct DebugSpawnCustomerRequest {
   pub grid_x: i32,
-  pub grid_z: i32,
+  pub grid_y: i32,
 }
 
 /// Broadcast whenever a floor / ceiling / surface placement or removal occurs.

@@ -1,32 +1,25 @@
 use bevy::prelude::*;
+use bse_model::{ModelAsset, ModelAssetHandle};
 use bse_sim::components::{
-  ApplianceGeometry, ChairState, Customer, GridDirection, GridPosition, MovementProgress,
-  RegisterState, Staff, StoveState, TableState,
+  ChairState, Customer, GridDirection, GridPosition, GridSize, MovementProgress, RegisterState,
+  Staff, StoveState, TableState,
 };
-
-use crate::vox::VoxelAssetHandle;
 
 pub fn render_tables(
   mut commands: Commands,
   assets: Res<AssetServer>,
   query: Query<
-    (Entity, &GridPosition, &ApplianceGeometry),
-    (Added<ApplianceGeometry>, With<TableState>),
+    (Entity, &GridPosition, &GridSize, &GridDirection),
+    (Added<GridSize>, With<TableState>),
   >,
 ) {
-  for (entity, pos, geo) in query.iter() {
-    let rotation_y = match geo.direction {
-      GridDirection::PosZ => 0.0,
-      GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
-      GridDirection::NegZ => std::f32::consts::PI,
-      GridDirection::PosX => std::f32::consts::FRAC_PI_2,
-    };
+  for (entity, pos, _size, direction) in query.iter() {
     let scale = 1.0 / 16.0;
     commands.entity(entity).insert((
-      VoxelAssetHandle(assets.load("table.vox")),
-      Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
+      ModelAssetHandle(assets.load("models/table.ron")),
+      Transform::from_xyz(pos.y as f32, 0.0, pos.x as f32)
         .with_scale(Vec3::splat(scale))
-        .with_rotation(Quat::from_rotation_y(rotation_y)),
+        .with_rotation(direction.to_bevy_quat()),
     ));
   }
 }
@@ -36,21 +29,13 @@ pub fn render_chairs(
   mut meshes: ResMut<Assets<Mesh>>,
   mut materials: ResMut<Assets<StandardMaterial>>,
   query: Query<
-    (Entity, &GridPosition, &ApplianceGeometry),
-    (Added<ApplianceGeometry>, With<ChairState>, Without<Mesh3d>),
+    (Entity, &GridPosition, &GridSize, &GridDirection),
+    (Added<GridSize>, With<ChairState>, Without<Mesh3d>),
   >,
 ) {
-  for (entity, pos, geo) in query.iter() {
-    let rotation_y = match geo.direction {
-      GridDirection::PosZ => 0.0,
-      GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
-      GridDirection::NegZ => std::f32::consts::PI,
-      GridDirection::PosX => std::f32::consts::FRAC_PI_2,
-    };
-
+  for (entity, pos, _size, direction) in query.iter() {
     commands.entity(entity).insert((
-      Transform::from_xyz(pos.x as f32, 0.0, pos.z as f32)
-        .with_rotation(Quat::from_rotation_y(rotation_y)),
+      Transform::from_xyz(pos.y as f32, 0.0, pos.x as f32).with_rotation(direction.to_bevy_quat()),
       Visibility::default(),
     ));
 
@@ -81,41 +66,17 @@ pub fn render_registers(
   mut commands: Commands,
   assets: Res<AssetServer>,
   query: Query<
-    (Entity, &GridPosition, &ApplianceGeometry),
-    (
-      Added<ApplianceGeometry>,
-      With<RegisterState>,
-      Without<Mesh3d>,
-    ),
+    (Entity, &GridPosition, &GridSize, &GridDirection),
+    (Added<GridSize>, With<RegisterState>, Without<Mesh3d>),
   >,
 ) {
-  for (entity, pos, geo) in query.iter() {
-    let rotation_y = match geo.direction {
-      GridDirection::PosZ => 0.0,
-      GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
-      GridDirection::NegZ => std::f32::consts::PI,
-      GridDirection::PosX => std::f32::consts::FRAC_PI_2,
-    };
-    // 2x1 footprint: center vox over long axis. right=2 along appliance's
-    // local "right" → world axis depends on direction.
-    let (sx, sz) = match geo.direction {
-      GridDirection::PosZ | GridDirection::NegZ => (geo.right, geo.forward),
-      GridDirection::PosX | GridDirection::NegX => (geo.forward, geo.right),
-    };
-    let offset_sign = match geo.direction {
-      GridDirection::PosZ | GridDirection::NegX => 1.0,
-      GridDirection::NegZ | GridDirection::PosX => -1.0,
-    };
-    let world_x = pos.x as f32 + offset_sign * (sx as f32 - 1.0) / 2.0;
-    let world_z = pos.z as f32 + offset_sign * (sz as f32 - 1.0) / 2.0;
-    // register.vox is 64x32x32 (2:1:1) → fits 2x1 footprint uniformly.
-    // bevy_vox_scene remap: bevy_x=vox_x (mirrored), bevy_y=vox_z (up), bevy_z=vox_y (depth).
+  for (entity, pos, _size, direction) in query.iter() {
     let scale = 1.0 / 32.0;
     commands.entity(entity).insert((
-      VoxelAssetHandle(assets.load("register.vox")),
-      Transform::from_xyz(world_x, 0.0, world_z)
+      ModelAssetHandle(assets.load("models/register.ron")),
+      Transform::from_xyz(pos.y as f32, 0.0, pos.x as f32)
         .with_scale(Vec3::splat(scale))
-        .with_rotation(Quat::from_rotation_y(rotation_y)),
+        .with_rotation(direction.to_bevy_quat()),
     ));
   }
 }
@@ -124,36 +85,42 @@ pub fn render_stoves(
   mut commands: Commands,
   assets: Res<AssetServer>,
   query: Query<
-    (Entity, &GridPosition, &ApplianceGeometry),
-    (Added<ApplianceGeometry>, With<StoveState>, Without<Mesh3d>),
+    (Entity, &GridPosition, &GridSize, &GridDirection),
+    (Added<GridSize>, With<StoveState>, Without<Mesh3d>),
   >,
 ) {
-  for (entity, pos, geo) in query.iter() {
-    let rotation_y = match geo.direction {
-      GridDirection::PosZ => 0.0,
-      GridDirection::NegX => -std::f32::consts::FRAC_PI_2,
-      GridDirection::NegZ => std::f32::consts::PI,
-      GridDirection::PosX => std::f32::consts::FRAC_PI_2,
-    };
-    // 2x1 footprint: center vox over long axis.
-    let (sx, sz) = match geo.direction {
-      GridDirection::PosZ | GridDirection::NegZ => (geo.right, geo.forward),
-      GridDirection::PosX | GridDirection::NegX => (geo.forward, geo.right),
-    };
-    let offset_sign = match geo.direction {
-      GridDirection::PosZ | GridDirection::NegX => 1.0,
-      GridDirection::NegZ | GridDirection::PosX => -1.0,
-    };
-    let world_x = pos.x as f32 + offset_sign * (sx as f32 - 1.0) / 2.0;
-    let world_z = pos.z as f32 + offset_sign * (sz as f32 - 1.0) / 2.0;
-    // stove.vox is 64x32x32 (2:1:1) → fits 2x1 footprint uniformly.
+  for (entity, pos, _size, direction) in query.iter() {
     let scale = 1.0 / 32.0;
     commands.entity(entity).insert((
-      VoxelAssetHandle(assets.load("stove.vox")),
-      Transform::from_xyz(world_x, 0.0, world_z)
+      ModelAssetHandle(assets.load("models/stove.ron")),
+      Transform::from_xyz(pos.y as f32, 0.0, pos.x as f32)
         .with_scale(Vec3::splat(scale))
-        .with_rotation(Quat::from_rotation_y(rotation_y)),
+        .with_rotation(direction.to_bevy_quat()),
     ));
+  }
+}
+
+/// For every entity with a [`ModelAssetHandle`] but no `Mesh3d` yet, look up
+/// the loaded `ModelAsset` and insert the bevy mesh + material handles.
+///
+/// Mirrors `vox::attach_voxel_mesh`'s `Without<Mesh3d>` re-match pattern
+/// because `AssetServer::load` is async — the first `Added` tick almost
+/// always fires before the asset is ready.
+pub fn attach_model_mesh(
+  mut commands: Commands,
+  mut meshes: ResMut<Assets<Mesh>>,
+  model_assets: Res<Assets<ModelAsset>>,
+  query: Query<(Entity, &ModelAssetHandle), (With<ModelAssetHandle>, Without<Mesh3d>)>,
+) {
+  for (entity, handle) in &query {
+    let Some(asset) = model_assets.get(&handle.0) else {
+      continue;
+    };
+    let mesh_handle = meshes.add(asset.mesh.clone());
+    let mat_handle = asset.materials.first().cloned().unwrap_or_default();
+    commands
+      .entity(entity)
+      .insert((Mesh3d(mesh_handle), MeshMaterial3d(mat_handle)));
   }
 }
 
@@ -174,7 +141,7 @@ pub fn render_new_staff(
         base_color: Color::Srgba(Srgba::new(0.2, 0.4, 0.8, 1.0)),
         ..default()
       })),
-      Transform::from_xyz(pos.x as f32, 0.65, pos.z as f32),
+      Transform::from_xyz(pos.y as f32, 0.65, pos.x as f32),
     ));
   }
 }
@@ -192,21 +159,18 @@ pub fn render_new_customers(
         base_color: Color::Srgba(Srgba::new(0.8, 0.2, 0.2, 1.0)),
         ..default()
       })),
-      Transform::from_xyz(pos.x as f32, 0.65, pos.z as f32),
+      Transform::from_xyz(pos.y as f32, 0.65, pos.x as f32),
     ));
   }
 }
 
-/// Reads logic-layer position ([`GridPosition`] + [`MovementProgress`]) and
-/// writes the visual [`Transform`].  Keeps visual interpolation out of the
-/// logic crate.
 pub fn sync_agent_transform(mut query: Query<(&GridPosition, &MovementProgress, &mut Transform)>) {
   for (_grid_pos, movement, mut transform) in query.iter_mut() {
-    let fx =
+    let f_grid_x =
       movement.from.0 as f32 + (movement.to.0 as f32 - movement.from.0 as f32) * movement.progress;
-    let fz =
+    let f_grid_y =
       movement.from.1 as f32 + (movement.to.1 as f32 - movement.from.1 as f32) * movement.progress;
-    transform.translation.x = fx;
-    transform.translation.z = fz;
+    transform.translation.x = f_grid_y;
+    transform.translation.z = f_grid_x;
   }
 }

@@ -1,4 +1,4 @@
-use crate::components::{ApplianceGeometry, GridDirection, GridFootprint};
+use crate::components::{GridDirection, GridFootprint, GridSize};
 use smallvec::SmallVec;
 
 /// Generate `length` cells along a direction from a start point.
@@ -17,21 +17,21 @@ pub fn adjacent_cells(footprint: &GridFootprint, range: u32) -> SmallVec<[(i32, 
   let r = range as i32;
   let min_x = footprint.cells.iter().map(|c| c.0).min().unwrap_or(0);
   let max_x = footprint.cells.iter().map(|c| c.0).max().unwrap_or(0);
-  let min_z = footprint.cells.iter().map(|c| c.1).min().unwrap_or(0);
-  let max_z = footprint.cells.iter().map(|c| c.1).max().unwrap_or(0);
+  let min_y = footprint.cells.iter().map(|c| c.1).min().unwrap_or(0);
+  let max_y = footprint.cells.iter().map(|c| c.1).max().unwrap_or(0);
   for x in (min_x - r)..=(max_x + r) {
-    for z in (min_z - r)..=(max_z + r) {
-      if footprint.cells.contains(&(x, z)) {
+    for y in (min_y - r)..=(max_y + r) {
+      if footprint.cells.contains(&(x, y)) {
         continue;
       }
       let dist = footprint
         .cells
         .iter()
-        .map(|&(fx, fz)| (x - fx).abs() + (z - fz).abs())
+        .map(|&(fx, fy)| (x - fx).abs() + (y - fy).abs())
         .min()
         .unwrap_or(i32::MAX);
       if dist <= r {
-        cells.push((x, z));
+        cells.push((x, y));
       }
     }
   }
@@ -41,20 +41,21 @@ pub fn adjacent_cells(footprint: &GridFootprint, range: u32) -> SmallVec<[(i32, 
 /// Cells in front of appliance, `depth` rows deep, one cell per width-column.
 pub fn front_cells(
   anchor: (i32, i32),
-  geo: &ApplianceGeometry,
+  size: &GridSize,
+  direction: GridDirection,
   depth: u32,
 ) -> SmallVec<[(i32, i32); 8]> {
   let mut cells = SmallVec::new();
-  let offset = geo.direction.facing_offset();
-  for w in 0..geo.right {
-    let (dx, dz) = match geo.direction {
-      GridDirection::PosZ | GridDirection::NegZ => (w, 0),
+  let offset = direction.facing_offset();
+  for w in 0..size.right {
+    let (dx, dy) = match direction {
       GridDirection::PosX | GridDirection::NegX => (0, w),
+      GridDirection::PosY | GridDirection::NegY => (w, 0),
     };
     for d in 1..=depth {
       cells.push((
         anchor.0 + dx + offset.0 * d as i32,
-        anchor.1 + dz + offset.1 * d as i32,
+        anchor.1 + dy + offset.1 * d as i32,
       ));
     }
   }
@@ -66,6 +67,6 @@ pub fn clamp(cells: &[(i32, i32)], bounds: (i32, i32)) -> SmallVec<[(i32, i32); 
   cells
     .iter()
     .copied()
-    .filter(|&(x, z)| x >= 0 && x < bounds.0 && z >= 0 && z < bounds.1)
+    .filter(|&(x, y)| x >= 0 && x < bounds.0 && y >= 0 && y < bounds.1)
     .collect()
 }

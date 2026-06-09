@@ -1,15 +1,46 @@
 use bevy::prelude::*;
-use bevy_egui::{egui, EguiContexts};
-use bse_sim::components::GridDirection;
+use bevy_egui::{EguiContexts, egui};
+use bse_model::ModelAssetHandle;
+use bse_sim::components::{GridDirection, GridPosition, GridSize};
 use bse_sim::messages::{
   DebugSpawnCustomerRequest, DebugSpawnStaffRequest, RequestDemolishAppliance, RequestPlaceChair,
   RequestPlaceRegister, RequestPlaceStove, RequestPlaceTable,
 };
 
+#[cfg(feature = "dev")]
+const DEV_L_SHAPE_ROW_Y: i32 = 8;
+
+#[cfg(feature = "dev")]
+pub fn spawn_dev_l_shape_test(mut commands: Commands, assets: Res<AssetServer>) {
+  let scale = 1.0 / 32.0;
+  for (i, dir) in [
+    (10, GridDirection::PosX),
+    (15, GridDirection::PosY),
+    (20, GridDirection::NegX),
+    (25, GridDirection::NegY),
+  ] {
+    commands.spawn((
+      GridPosition {
+        x: i,
+        y: DEV_L_SHAPE_ROW_Y,
+      },
+      dir,
+      GridSize {
+        right: 1,
+        forward: 1,
+      },
+      ModelAssetHandle(assets.load("models/dev_l_shape.ron")),
+      Transform::from_xyz(DEV_L_SHAPE_ROW_Y as f32, 0.0, i as f32)
+        .with_scale(Vec3::splat(scale))
+        .with_rotation(dir.to_bevy_quat()),
+    ));
+  }
+}
+
 #[derive(Resource)]
 pub struct DevConsoleState {
   pub anchor_x: i32,
-  pub anchor_z: i32,
+  pub anchor_y: i32,
   pub direction: GridDirection,
 }
 
@@ -17,22 +48,22 @@ impl Default for DevConsoleState {
   fn default() -> Self {
     Self {
       anchor_x: 16,
-      anchor_z: 16,
-      direction: GridDirection::PosZ,
+      anchor_y: 16,
+      direction: GridDirection::PosX,
     }
   }
 }
 
 const GRID_RANGE: std::ops::RangeInclusive<i32> = 0..=31;
 
-fn anchor_section(ui: &mut egui::Ui, anchor_x: &mut i32, anchor_z: &mut i32) {
+fn anchor_section(ui: &mut egui::Ui, anchor_x: &mut i32, anchor_y: &mut i32) {
   ui.group(|ui| {
     ui.label("Anchor Position");
     ui.separator();
     coord_row(ui, "X:", anchor_x);
-    coord_row(ui, "Z:", anchor_z);
+    coord_row(ui, "Y:", anchor_y);
     ui.horizontal(|ui| {
-      ui.label(format!("  ({}, {})", anchor_x, anchor_z));
+      ui.label(format!("  ({}, {})", anchor_x, anchor_y));
     });
   });
 }
@@ -42,10 +73,10 @@ fn direction_section(ui: &mut egui::Ui, direction: &mut GridDirection) {
     ui.label("Direction");
     ui.separator();
     ui.horizontal(|ui| {
-      ui.selectable_value(direction, GridDirection::PosZ, "+Z");
-      ui.selectable_value(direction, GridDirection::NegX, "-X");
-      ui.selectable_value(direction, GridDirection::NegZ, "-Z");
       ui.selectable_value(direction, GridDirection::PosX, "+X");
+      ui.selectable_value(direction, GridDirection::PosY, "+Y");
+      ui.selectable_value(direction, GridDirection::NegX, "-X");
+      ui.selectable_value(direction, GridDirection::NegY, "-Y");
     });
   });
 }
@@ -108,7 +139,7 @@ fn spawn_section(
     if ui.button("Customer").clicked() {
       customer_writer.write(DebugSpawnCustomerRequest {
         grid_x: anchor.0,
-        grid_z: anchor.1,
+        grid_y: anchor.1,
       });
     }
 
@@ -117,7 +148,7 @@ fn spawn_section(
     if ui.button("Staff").clicked() {
       staff_writer.write(DebugSpawnStaffRequest {
         grid_x: anchor.0,
-        grid_z: anchor.1,
+        grid_y: anchor.1,
       });
     }
   });
@@ -136,7 +167,7 @@ pub fn render_egui_console(
 ) {
   // copy out of ResMut to avoid borrow conflicts through DerefMut
   let mut anchor_x = state.anchor_x;
-  let mut anchor_z = state.anchor_z;
+  let mut anchor_y = state.anchor_y;
   let mut direction = state.direction;
 
   let Ok(ctx) = contexts.ctx_mut() else {
@@ -146,13 +177,13 @@ pub fn render_egui_console(
   egui::Window::new("Debug Console")
     .default_width(280.0)
     .show(ctx, |ui| {
-      anchor_section(ui, &mut anchor_x, &mut anchor_z);
+      anchor_section(ui, &mut anchor_x, &mut anchor_y);
       ui.add_space(8.0);
 
       direction_section(ui, &mut direction);
       ui.add_space(8.0);
 
-      let anchor = (anchor_x, anchor_z);
+      let anchor = (anchor_x, anchor_y);
       placement_section(
         ui,
         anchor,
@@ -177,7 +208,7 @@ pub fn render_egui_console(
 
   // sync back
   state.anchor_x = anchor_x;
-  state.anchor_z = anchor_z;
+  state.anchor_y = anchor_y;
   state.direction = direction;
 }
 

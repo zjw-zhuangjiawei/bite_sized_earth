@@ -1,0 +1,33 @@
+[package]
+name = "bse_model"
+version = "0.1.0"
+edition = "2024"
+
+[features]
+default = ["bevy"]
+bevy = [
+  "dep:bevy",
+  "dep:bevy_asset",
+  "dep:bevy_image",
+  "dep:bevy_mesh",
+  "dep:bevy_pbr",
+  "dep:bevy_render",
+]
+vox-dev = ["dep:dot-vox"]
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+ron = "0.8"
+thiserror = "2"
+bevy = { version = "0.18", optional = true, default-features = false, features = ["bevy_asset"] }
+bevy_asset = { version = "0.18", optional = true }
+bevy_image = { version = "0.18", optional = true }
+bevy_mesh = { version = "0.18", optional = true }
+bevy_pbr = { version = "0.18", optional = true }
+bevy_render = { version = "0.18", optional = true }
+dot-vox = { version = "5", optional = true, package = "dot_vox" }
+
+[[bin]]
+name = "convert-vox"
+path = "src/bin/convert_vox.rs"
+required-features = ["vox-dev"]

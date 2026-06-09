@@ -1,0 +1,134 @@
+(
+    name: "stove",
+    materials: [
+        "wood/oak",
+    ],
+    faces: [
+        (
+            plane: PosX,
+            depth: 64,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                32,
+                20,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                512,
+                320,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegX,
+            depth: 0,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                32,
+                20,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                512,
+                320,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosY,
+            depth: 32,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                20,
+                64,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                320,
+                1024,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegY,
+            depth: 0,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                20,
+                64,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                320,
+                1024,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosZ,
+            depth: 20,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                64,
+                32,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                1024,
+                512,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegZ,
+            depth: 0,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                64,
+                32,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                1024,
+                512,
+            ),
+            material: 0,
+        ),
+    ],
+)

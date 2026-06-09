@@ -87,15 +87,15 @@ pub fn local_step(
 /// Prefers horizontal movement when both axes differ.
 fn direction_toward(from: (i32, i32), to: (i32, i32)) -> (i32, i32) {
   let dx = (to.0 - from.0).clamp(-1, 1);
-  let dz = (to.1 - from.1).clamp(-1, 1);
-  if dx != 0 && dz != 0 {
+  let dy = (to.1 - from.1).clamp(-1, 1);
+  if dx != 0 && dy != 0 {
     if to.0.abs_diff(from.0) >= to.1.abs_diff(from.1) {
       (dx, 0)
     } else {
-      (0, dz)
+      (0, dy)
     }
   } else {
-    (dx, dz)
+    (dx, dy)
   }
 }
 
@@ -121,8 +121,8 @@ fn bfs_closer(
       continue;
     }
 
-    for &(dx, dz) in &[(1i32, 0i32), (-1, 0), (0, 1), (0, -1)] {
-      let next = (cell.0 + dx, cell.1 + dz);
+    for &(dx, dy) in &[(1i32, 0i32), (-1, 0), (0, 1), (0, -1)] {
+      let next = (cell.0 + dx, cell.1 + dy);
       if visited.contains(&next) {
         continue;
       }

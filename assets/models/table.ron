@@ -1,0 +1,470 @@
+(
+    name: "table",
+    materials: [
+        "wood/oak",
+    ],
+    faces: [
+        (
+            plane: PosX,
+            depth: 16,
+            geo_min: (
+                2,
+                0,
+            ),
+            geo_size: (
+                2,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosX,
+            depth: 16,
+            geo_min: (
+                12,
+                0,
+            ),
+            geo_size: (
+                2,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosX,
+            depth: 16,
+            geo_min: (
+                0,
+                14,
+            ),
+            geo_size: (
+                2,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosX,
+            depth: 16,
+            geo_min: (
+                4,
+                14,
+            ),
+            geo_size: (
+                8,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                128,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosX,
+            depth: 16,
+            geo_min: (
+                14,
+                14,
+            ),
+            geo_size: (
+                2,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegX,
+            depth: 0,
+            geo_min: (
+                2,
+                0,
+            ),
+            geo_size: (
+                2,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegX,
+            depth: 0,
+            geo_min: (
+                12,
+                0,
+            ),
+            geo_size: (
+                2,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegX,
+            depth: 0,
+            geo_min: (
+                0,
+                14,
+            ),
+            geo_size: (
+                2,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegX,
+            depth: 0,
+            geo_min: (
+                4,
+                14,
+            ),
+            geo_size: (
+                8,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                128,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegX,
+            depth: 0,
+            geo_min: (
+                14,
+                14,
+            ),
+            geo_size: (
+                2,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosY,
+            depth: 4,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                14,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                224,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosY,
+            depth: 14,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                14,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                224,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosY,
+            depth: 16,
+            geo_min: (
+                14,
+                0,
+            ),
+            geo_size: (
+                2,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegY,
+            depth: 0,
+            geo_min: (
+                14,
+                0,
+            ),
+            geo_size: (
+                2,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                32,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegY,
+            depth: 2,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                14,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                224,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegY,
+            depth: 12,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                14,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                224,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: PosZ,
+            depth: 16,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                16,
+                16,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                256,
+                256,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegZ,
+            depth: 0,
+            geo_min: (
+                0,
+                2,
+            ),
+            geo_size: (
+                16,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                256,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegZ,
+            depth: 0,
+            geo_min: (
+                0,
+                12,
+            ),
+            geo_size: (
+                16,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                256,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegZ,
+            depth: 14,
+            geo_min: (
+                0,
+                0,
+            ),
+            geo_size: (
+                16,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                256,
+                32,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegZ,
+            depth: 14,
+            geo_min: (
+                0,
+                4,
+            ),
+            geo_size: (
+                16,
+                8,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                256,
+                128,
+            ),
+            material: 0,
+        ),
+        (
+            plane: NegZ,
+            depth: 14,
+            geo_min: (
+                0,
+                14,
+            ),
+            geo_size: (
+                16,
+                2,
+            ),
+            uv_min: (
+                0,
+                0,
+            ),
+            uv_size: (
+                256,
+                32,
+            ),
+            material: 0,
+        ),
+    ],
+)

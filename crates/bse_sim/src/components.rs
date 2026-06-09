@@ -13,7 +13,7 @@ pub const EXIT_POSITION: (i32, i32) = (0, 0);
 #[derive(Component, Debug, Clone, Copy)]
 pub struct GridPosition {
   pub x: i32,
-  pub z: i32,
+  pub y: i32,
 }
 
 #[derive(Component, Debug, Clone, Copy)]
@@ -25,7 +25,7 @@ pub struct SlotOffset {
 #[derive(Component, Debug, Clone, Copy)]
 pub struct SlotPosition {
   pub x: i32,
-  pub z: i32,
+  pub y: i32,
 }
 
 /// Which layer this entity belongs to (placed by construction handlers).
@@ -137,39 +137,56 @@ pub struct SlotTarget {
 // 5. Appliance geometry + footprint
 // =========================================================================
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq)]
 pub enum GridDirection {
-  PosZ,
-  NegX,
-  NegZ,
   PosX,
+  PosY,
+  NegX,
+  NegY,
 }
 
 impl GridDirection {
   pub fn rotate_cw(self) -> Self {
     match self {
-      Self::PosZ => Self::NegX,
-      Self::NegX => Self::NegZ,
-      Self::NegZ => Self::PosX,
-      Self::PosX => Self::PosZ,
+      Self::PosX => Self::NegY,
+      Self::NegY => Self::NegX,
+      Self::NegX => Self::PosY,
+      Self::PosY => Self::PosX,
+    }
+  }
+
+  pub fn rotate_ccw(self) -> Self {
+    match self {
+      Self::PosX => Self::PosY,
+      Self::PosY => Self::NegX,
+      Self::NegX => Self::NegY,
+      Self::NegY => Self::PosX,
     }
   }
 
   pub fn facing_offset(self) -> (i32, i32) {
     match self {
-      Self::PosZ => (0, 1),
-      Self::NegZ => (0, -1),
       Self::PosX => (1, 0),
+      Self::PosY => (0, 1),
       Self::NegX => (-1, 0),
+      Self::NegY => (0, -1),
+    }
+  }
+
+  pub fn to_bevy_quat(self) -> Quat {
+    match self {
+      Self::PosX => Quat::from_rotation_y(0.0),
+      Self::PosY => Quat::from_rotation_y(std::f32::consts::FRAC_PI_2),
+      Self::NegX => Quat::from_rotation_y(std::f32::consts::PI),
+      Self::NegY => Quat::from_rotation_y(-std::f32::consts::FRAC_PI_2),
     }
   }
 }
 
 #[derive(Component, Debug, Clone, Copy)]
-pub struct ApplianceGeometry {
+pub struct GridSize {
   pub right: i32,
   pub forward: i32,
-  pub direction: GridDirection,
 }
 
 /// Compute all grid cells occupied by an appliance.
@@ -178,19 +195,23 @@ pub struct ApplianceGeometry {
 /// direction's perspective).  The appliance extends `right` cells to the
 /// right (perpendicular to facing) and `forward` cells along the facing
 /// direction.
-pub fn get_footprint(geometry: &ApplianceGeometry, anchor: (i32, i32)) -> Vec<(i32, i32)> {
-  let (sx, sz) = match geometry.direction {
-    GridDirection::PosZ | GridDirection::NegZ => (geometry.right, geometry.forward),
-    GridDirection::PosX | GridDirection::NegX => (geometry.forward, geometry.right),
+pub fn get_footprint(
+  size: &GridSize,
+  direction: GridDirection,
+  anchor: (i32, i32),
+) -> Vec<(i32, i32)> {
+  let (sx, sy) = match direction {
+    GridDirection::PosX | GridDirection::NegX => (size.forward, size.right),
+    GridDirection::PosY | GridDirection::NegY => (size.right, size.forward),
   };
-  let (ax, az) = match geometry.direction {
-    GridDirection::PosZ | GridDirection::NegX => (anchor.0, anchor.1),
-    GridDirection::NegZ | GridDirection::PosX => (anchor.0 - sx + 1, anchor.1 - sz + 1),
+  let (ax, ay) = match direction {
+    GridDirection::PosX | GridDirection::NegY => (anchor.0, anchor.1),
+    GridDirection::NegX | GridDirection::PosY => (anchor.0 - sx + 1, anchor.1 - sy + 1),
   };
-  let mut cells = Vec::with_capacity((sx * sz) as usize);
+  let mut cells = Vec::with_capacity((sx * sy) as usize);
   for dx in 0..sx {
-    for dz in 0..sz {
-      cells.push((ax + dx, az + dz));
+    for dy in 0..sy {
+      cells.push((ax + dx, ay + dy));
     }
   }
   cells

@@ -22,7 +22,7 @@ impl EntityCommand for NavigateTo {
     let pos = entity
       .get::<GridPosition>()
       .expect("NavigateTo requires GridPosition component");
-    let start = (pos.x, pos.z);
+    let start = (pos.x, pos.y);
 
     let grid = entity.resource::<GridLayers>();
 
@@ -64,7 +64,7 @@ impl EntityCommand for NavigateToSlot {
     let pos = entity
       .get::<GridPosition>()
       .expect("NavigateToSlot requires GridPosition component");
-    let start = (pos.x, pos.z);
+    let start = (pos.x, pos.y);
 
     let Some(target_pos) = entity.world().get::<SlotPosition>(self.slot) else {
       warn!(
@@ -73,7 +73,7 @@ impl EntityCommand for NavigateToSlot {
       );
       return;
     };
-    let target = (target_pos.x, target_pos.z);
+    let target = (target_pos.x, target_pos.y);
 
     let grid = entity.resource::<GridLayers>();
 

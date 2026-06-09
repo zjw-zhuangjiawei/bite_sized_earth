@@ -27,7 +27,7 @@ pub fn setup_checkerboard(
       commands.spawn((
         Mesh3d(tile_mesh.clone()),
         MeshMaterial3d(material),
-        Transform::from_xyz(x as f32, -0.1, z as f32),
+        Transform::from_xyz(z as f32 + 0.5, -0.1, x as f32 + 0.5),
       ));
     }
   }

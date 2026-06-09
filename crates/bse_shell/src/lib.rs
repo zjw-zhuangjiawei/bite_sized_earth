@@ -5,13 +5,12 @@ pub mod dev_console;
 pub mod environment;
 pub mod input;
 pub mod reactive;
-pub mod vox;
 
 use bevy::prelude::*;
 use bevy_egui::EguiPlugin;
 use bevy_enhanced_input::EnhancedInputPlugin;
 
-use vox::VoxLoaderPlugin;
+use bse_model::ModelLoaderPlugin;
 
 #[cfg(feature = "dev")]
 use bevy_egui::EguiPrimaryContextPass;
@@ -26,7 +25,7 @@ impl Plugin for ShellPlugin {
   fn build(&self, app: &mut App) {
     app.add_plugins(EguiPlugin::default());
     app.add_plugins(EnhancedInputPlugin);
-    app.add_plugins(VoxLoaderPlugin);
+    app.add_plugins(ModelLoaderPlugin);
     app.add_plugins(CameraControlPlugin);
 
     #[cfg(feature = "dev")]
@@ -36,6 +35,9 @@ impl Plugin for ShellPlugin {
       Startup,
       (environment::setup_checkerboard, environment::setup_lighting),
     );
+
+    #[cfg(feature = "dev")]
+    app.add_systems(Startup, dev_console::spawn_dev_l_shape_test);
     app.add_systems(
       Update,
       (
@@ -43,6 +45,7 @@ impl Plugin for ShellPlugin {
         reactive::render_chairs,
         reactive::render_registers,
         reactive::render_stoves,
+        reactive::attach_model_mesh,
         reactive::render_new_staff,
         reactive::render_new_customers,
         reactive::sync_agent_transform,
@@ -50,6 +53,7 @@ impl Plugin for ShellPlugin {
         (
           debug_gizmos::draw_spawn_position_highlight_system,
           debug_gizmos::draw_agent_path_preview_system,
+          debug_gizmos::draw_world_grid_overlay,
           debug_gizmos::draw_world_axes,
           debug_gizmos::draw_appliance_direction_gizmos,
           debug_gizmos::draw_slot_gizmos,

@@ -1,6 +1,6 @@
 use crate::components::{
-  get_footprint, ApplianceGeometry, BelongsToTable, ChairState, Customer, CustomerState,
-  GridPosition, Staff, StaffState, TableState,
+  BelongsToTable, ChairState, Customer, CustomerState, GridDirection, GridPosition, GridSize,
+  Staff, StaffState, TableState, get_footprint,
 };
 use crate::messages::{DebugSpawnCustomerRequest, DebugSpawnStaffRequest};
 use crate::world::GridLayers;
@@ -16,14 +16,14 @@ pub fn handle_spawn_staff_requests(
   mut message_reader: MessageReader<DebugSpawnStaffRequest>,
 ) {
   for req in message_reader.read() {
-    if !grid.is_walkable(req.grid_x, req.grid_z) {
+    if !grid.is_walkable(req.grid_x, req.grid_y) {
       continue;
     }
 
     commands.spawn((
       GridPosition {
         x: req.grid_x,
-        z: req.grid_z,
+        y: req.grid_y,
       },
       Staff {
         state: StaffState::Idle,
@@ -38,15 +38,15 @@ pub fn handle_spawn_customer_requests(
   mut message_reader: MessageReader<DebugSpawnCustomerRequest>,
 ) {
   for req in message_reader.read() {
-    if !grid.is_walkable(req.grid_x, req.grid_z) {
+    if !grid.is_walkable(req.grid_x, req.grid_y) {
       continue;
     }
-    info!("Spawning customer at ({},{})", req.grid_x, req.grid_z);
+    info!("Spawning customer at ({},{})", req.grid_x, req.grid_y);
 
     commands.spawn((
       GridPosition {
         x: req.grid_x,
-        z: req.grid_z,
+        y: req.grid_y,
       },
       Customer {
         state: CustomerState::Entering,
@@ -68,25 +68,23 @@ pub fn has_unbound_chairs(chair_q: Query<&ChairState, Without<BelongsToTable>>) 
 pub fn bind_new_chairs_system(
   mut commands: Commands,
   chair_q: Query<
-    (Entity, &GridPosition, &ApplianceGeometry),
+    (Entity, &GridPosition, &GridSize, &GridDirection),
     (With<ChairState>, Without<BelongsToTable>),
   >,
-  table_q: Query<(Entity, &GridPosition, &ApplianceGeometry), With<TableState>>,
+  table_q: Query<(Entity, &GridPosition, &GridSize, &GridDirection), With<TableState>>,
 ) {
-  for (chair_entity, chair_pos, chair_geo) in chair_q.iter() {
-    let adj = (
-      chair_pos.x + chair_geo.direction.facing_offset().0,
-      chair_pos.z + chair_geo.direction.facing_offset().1,
-    );
-    for (table_entity, table_pos, table_geo) in table_q.iter() {
-      let footprint = get_footprint(table_geo, (table_pos.x, table_pos.z));
+  for (chair_entity, chair_pos, _chair_size, chair_dir) in chair_q.iter() {
+    let (dx, dy) = chair_dir.facing_offset();
+    let adj = (chair_pos.x + dx, chair_pos.y + dy);
+    for (table_entity, table_pos, table_size, table_dir) in table_q.iter() {
+      let footprint = get_footprint(table_size, *table_dir, (table_pos.x, table_pos.y));
       if footprint.contains(&adj) {
         commands.entity(chair_entity).insert(BelongsToTable {
           table: table_entity,
         });
         info!(
           "Chair at ({},{}) bound to table {:?}",
-          chair_pos.x, chair_pos.z, table_entity
+          chair_pos.x, chair_pos.y, table_entity
         );
         break;
       }

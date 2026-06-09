@@ -1,6 +1,6 @@
 use crate::components::{
-  BelongsToTable, Customer, CustomerState, GridPosition, NavigationComplete, RegisterState,
-  SeatedAt, SlotPosition, SlotTarget, TableState,
+  BelongsToTable, Customer, CustomerState, GridDirection, GridPosition, GridSize,
+  NavigationComplete, RegisterState, SeatedAt, SlotPosition, SlotTarget, TableState,
 };
 use crate::navigation_cmd::NavigateToSlot;
 use crate::slots::{CustomerSitSlot, ExitSlot, Occupied, QueueSlot};
@@ -32,7 +32,7 @@ pub fn customer_find_seat(
       {
         continue;
       }
-      let dist = (c_pos.x - slot_pos.x).abs() + (c_pos.z - slot_pos.z).abs();
+      let dist = (c_pos.x - slot_pos.x).abs() + (c_pos.y - slot_pos.y).abs();
       if dist < best_dist {
         best_dist = dist;
         best = Some(slot_entity);
@@ -52,7 +52,7 @@ pub fn customer_find_seat(
     });
     info!(
       "Customer at ({},{}) heading to chair slot {:?}",
-      c_pos.x, c_pos.z, slot_entity,
+      c_pos.x, c_pos.y, slot_entity,
     );
   }
 }
@@ -122,7 +122,7 @@ pub fn customer_eating(
   sit_slots: Query<&ChildOf, With<CustomerSitSlot>>,
   chair_q: Query<&BelongsToTable>,
   table_q: Query<&TableState>,
-  reg_q: Query<(Entity, &GridPosition, &crate::components::ApplianceGeometry), With<RegisterState>>,
+  reg_q: Query<(Entity, &GridPosition, &GridSize, &GridDirection), With<RegisterState>>,
   reg_queue_slots: Query<(Entity, &ChildOf, &QueueSlot, &SlotPosition)>,
   reg_occupied: Query<&Occupied>,
   exit_slot: Query<Entity, With<ExitSlot>>,
@@ -164,7 +164,7 @@ pub fn customer_eating(
     let mut best: Option<(Entity, (i32, i32))> = None;
     let mut best_dist = i32::MAX;
 
-    for (reg_entity, _reg_pos, _reg_geo) in reg_q.iter() {
+    for (reg_entity, _reg_pos, _reg_size, _reg_dir) in reg_q.iter() {
       let mut lowest: Option<(Entity, usize, (i32, i32))> = None;
       for (slot_entity, parent, qslot, slot_pos) in reg_queue_slots.iter() {
         if parent.parent() != reg_entity {
@@ -173,7 +173,7 @@ pub fn customer_eating(
         if reg_occupied.contains(slot_entity) {
           continue;
         }
-        let cell = (slot_pos.x, slot_pos.z);
+        let cell = (slot_pos.x, slot_pos.y);
         if lowest.map_or(true, |(_, idx, _)| qslot.index < idx) {
           lowest = Some((slot_entity, qslot.index, cell));
         }
@@ -181,7 +181,7 @@ pub fn customer_eating(
       let Some((slot_entity, _idx, cell)) = lowest else {
         continue;
       };
-      let dist = (c_pos.x - cell.0).abs() + (c_pos.z - cell.1).abs();
+      let dist = (c_pos.x - cell.0).abs() + (c_pos.y - cell.1).abs();
       if dist < best_dist {
         best_dist = dist;
         best = Some((slot_entity, cell));

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use smallvec::SmallVec;
 
 use crate::components::{
-  get_footprint, ApplianceGeometry, GridDirection, GridFootprint, GridPosition, RegisterQueue,
+  GridDirection, GridFootprint, GridPosition, GridSize, RegisterQueue, get_footprint,
 };
 use crate::messages::GridChangedMessage;
 use crate::world::{GridLayer, GridLayers};
@@ -44,20 +44,20 @@ macro_rules! define_appliances {
                     mut reader: MessageReader<$msg>,
                 ) {
                     for req in reader.read() {
-                        let geometry = ApplianceGeometry {
+                        let geometry = GridSize {
                             right: $right,
                             forward: $forward,
-                            direction: req.direction,
                         };
                         let footprint_cells: Vec<(i32, i32)> =
-                            get_footprint(&geometry, req.anchor);
+                            get_footprint(&geometry, req.direction, req.anchor);
 
                         let footprint_sv: SmallVec<[(i32, i32); 8]> =
                             footprint_cells.iter().copied().collect();
 
                         let entity = commands
                             .spawn((
-                                GridPosition { x: req.anchor.0, z: req.anchor.1 },
+                                GridPosition { x: req.anchor.0, y: req.anchor.1 },
+                                req.direction,
                                 GridFootprint {
                                     cells: footprint_sv.clone(),
                                 },

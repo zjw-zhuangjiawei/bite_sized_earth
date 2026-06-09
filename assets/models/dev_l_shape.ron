@@ -1,0 +1,128 @@
+(
+    name: "dev_l_shape",
+    materials: [
+        "dev/test",
+    ],
+    faces: [
+        // z=0 bottom (left block: x[0,16] y[0,32])
+        (
+            plane: NegZ,
+            depth: 0,
+            geo_min: (0, 0),
+            geo_size: (16, 32),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // z=0 bottom (right block: x[16,32] y[8,24])
+        (
+            plane: NegZ,
+            depth: 0,
+            geo_min: (16, 8),
+            geo_size: (16, 16),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // z=32 top (left block: x[0,16] y[0,32])
+        (
+            plane: PosZ,
+            depth: 32,
+            geo_min: (0, 0),
+            geo_size: (16, 32),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // z=32 top (right block: x[16,32] y[8,24])
+        (
+            plane: PosZ,
+            depth: 32,
+            geo_min: (16, 8),
+            geo_size: (16, 16),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // y=0 front (left block, x in [0,16], z in [0,32]; geo_size=(Z_size, X_size)=(32,16))
+        (
+            plane: NegY,
+            depth: 0,
+            geo_min: (0, 0),
+            geo_size: (32, 16),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // y=32 back (left block, x in [0,16], z in [0,32]; geo_size=(Z_size, X_size)=(32,16))
+        (
+            plane: PosY,
+            depth: 32,
+            geo_min: (0, 0),
+            geo_size: (32, 16),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // x=0 left (left block, y in [0,32])
+        (
+            plane: NegX,
+            depth: 0,
+            geo_min: (0, 0),
+            geo_size: (32, 32),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // x=32 right (right block, y in [8,24])
+        (
+            plane: PosX,
+            depth: 32,
+            geo_min: (8, 0),
+            geo_size: (16, 32),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // y=8 notch front (right block -Y face, x in [16,32], z in [0,32]; geo_size=(Z_size, X_size)=(32,16))
+        (
+            plane: NegY,
+            depth: 8,
+            geo_min: (0, 16),
+            geo_size: (32, 16),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // y=24 notch back (right block +Y face, x in [16,32], z in [0,32]; geo_size=(Z_size, X_size)=(32,16))
+        (
+            plane: PosY,
+            depth: 24,
+            geo_min: (0, 16),
+            geo_size: (32, 16),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // x=16 left block right (lower part, y in [0,8])
+        (
+            plane: PosX,
+            depth: 16,
+            geo_min: (0, 0),
+            geo_size: (8, 32),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+        // x=16 left block right (upper part, y in [24,32])
+        (
+            plane: PosX,
+            depth: 16,
+            geo_min: (24, 0),
+            geo_size: (8, 32),
+            uv_min: (0, 0),
+            uv_size: (16, 16),
+            material: 0,
+        ),
+    ],
+)

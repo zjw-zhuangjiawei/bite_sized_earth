@@ -9,14 +9,14 @@ pub fn compute_agent_path(
 ) -> Option<Vec<(i32, i32)>> {
   let result = astar(
     &start,
-    |&(x, z)| {
+    |&(x, y)| {
       [(1i32, 0i32), (-1, 0), (0, 1), (0, -1)]
         .into_iter()
-        .map(move |(dx, dz)| (x + dx, z + dz))
-        .filter(|&(nx, nz)| grid.is_walkable(nx, nz) || (nx, nz) == goal)
+        .map(move |(dx, dy)| (x + dx, y + dy))
+        .filter(|&(nx, ny)| grid.is_walkable(nx, ny) || (nx, ny) == goal)
         .map(|p| (p, 1))
     },
-    |&(x, z)| (goal.0.abs_diff(x) + goal.1.abs_diff(z)) as i32,
+    |&(x, y)| (goal.0.abs_diff(x) + goal.1.abs_diff(y)) as i32,
     |&p| p == goal,
   );
   let path = result.map(|(path, _cost)| path);

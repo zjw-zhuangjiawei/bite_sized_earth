@@ -43,11 +43,11 @@ impl Plugin for CameraControlPlugin {
 // ---------------------------------------------------------------------------
 
 fn setup_camera(mut commands: Commands) {
-  let angle_y = std::f32::consts::FRAC_PI_4;
+  let angle_y = std::f32::consts::FRAC_PI_4 + std::f32::consts::PI;
   let angle_x = -(1.0 / 3.0_f32.sqrt()).asin();
   let isometric_rotation = Quat::from_rotation_y(angle_y) * Quat::from_rotation_x(angle_x);
 
-  let grid_center = Vec3::new(15.5, 0.0, 15.5);
+  let grid_center = Vec3::new(16.0, 0.0, 16.0);
   let camera_back_dir = isometric_rotation * Vec3::Z;
   let camera_position = grid_center + camera_back_dir * 50.0;
 
@@ -100,7 +100,7 @@ fn camera_controller_system(
   let pan_value = **pan;
   if pan_value != Vec2::ZERO {
     let input = pan_value.normalize_or_zero();
-    let rotation = Quat::from_rotation_y(45.0_f32.to_radians());
+    let rotation = Quat::from_rotation_y(225.0_f32.to_radians());
     let isometric_dir = rotation * Vec3::new(input.x, 0.0, -input.y);
     let delta = isometric_dir * 500.0 * time.delta_secs() * ortho.scale;
     transform.translation += delta;

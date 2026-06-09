@@ -1,6 +1,6 @@
 use crate::components::{
-  ApplianceGeometry, ChairState, GridDirection, GridPosition, RegisterState, SlotOffset,
-  SlotPosition, StoveState, TableState, EXIT_POSITION,
+  ChairState, EXIT_POSITION, GridDirection, GridPosition, GridSize, RegisterState, SlotOffset,
+  SlotPosition, StoveState, TableState,
 };
 use crate::slots::{
   CustomerSitSlot, ExitSlot, Occupied, QueueSlot, StaffCheckoutSlot, StaffCookSlot,
@@ -18,15 +18,15 @@ pub fn spawn_table_slots(
   for (entity, pos) in query.iter() {
     commands.entity(entity).with_children(|parent| {
       for side in [
-        GridDirection::PosZ,
-        GridDirection::NegX,
-        GridDirection::NegZ,
         GridDirection::PosX,
+        GridDirection::PosY,
+        GridDirection::NegX,
+        GridDirection::NegY,
       ] {
-        let (dx, dz) = side.facing_offset();
+        let (dx, dy) = side.facing_offset();
         let cx = pos.x + dx;
-        let cz = pos.z + dz;
-        if cx >= 0 && cx < grid.width && cz >= 0 && cz < grid.height {
+        let cy = pos.y + dy;
+        if cx >= 0 && cx < grid.width && cy >= 0 && cy < grid.height {
           parent.spawn(StaffDeliverSlot { side });
         }
       }
@@ -93,24 +93,24 @@ pub fn spawn_chair_slots(
 pub fn insert_cook_offset(
   mut commands: Commands,
   slots: Query<(Entity, &ChildOf), (Added<StaffCookSlot>, Without<SlotOffset>)>,
-  parents: Query<(&GridPosition, &ApplianceGeometry)>,
+  parents: Query<(&GridPosition, &GridSize, &GridDirection)>,
 ) {
   for (entity, parent_handle) in slots.iter() {
-    let Ok((parent_pos, geo)) = parents.get(parent_handle.parent()) else {
+    let Ok((parent_pos, size, direction)) = parents.get(parent_handle.parent()) else {
       continue;
     };
-    let right = geo.right;
-    let (dx, dz) = match geo.direction {
-      GridDirection::PosZ => (right - 1, 1),
-      GridDirection::NegZ => (0, -1),
+    let right = size.right;
+    let (dx, dy) = match direction {
+      GridDirection::PosY => (right - 1, 1),
+      GridDirection::NegY => (0, -1),
       GridDirection::PosX => (1, 0),
       GridDirection::NegX => (-1, right - 1),
     };
     commands.entity(entity).insert((
-      SlotOffset { dx, dz },
+      SlotOffset { dx, dz: dy },
       SlotPosition {
         x: parent_pos.x + dx,
-        z: parent_pos.z + dz,
+        y: parent_pos.y + dy,
       },
     ));
   }
@@ -131,12 +131,12 @@ pub fn insert_deliver_offset(
     let Ok(parent_pos) = parents.get(parent_handle.parent()) else {
       continue;
     };
-    let (dx, dz) = slot.side.facing_offset();
+    let (dx, dy) = slot.side.facing_offset();
     commands.entity(entity).insert((
-      SlotOffset { dx, dz },
+      SlotOffset { dx, dz: dy },
       SlotPosition {
         x: parent_pos.x + dx,
-        z: parent_pos.z + dz,
+        y: parent_pos.y + dy,
       },
     ));
   }
@@ -148,23 +148,23 @@ pub fn insert_deliver_offset(
 pub fn insert_checkout_offset(
   mut commands: Commands,
   slots: Query<(Entity, &ChildOf), (Added<StaffCheckoutSlot>, Without<SlotOffset>)>,
-  parents: Query<(&GridPosition, &ApplianceGeometry)>,
+  parents: Query<(&GridPosition, &GridSize, &GridDirection)>,
 ) {
   for (entity, parent_handle) in slots.iter() {
-    let Ok((parent_pos, geo)) = parents.get(parent_handle.parent()) else {
+    let Ok((parent_pos, size, direction)) = parents.get(parent_handle.parent()) else {
       continue;
     };
-    let (dx, dz) = match geo.direction {
-      GridDirection::PosZ => (geo.right / 2, -1),
-      GridDirection::NegZ => (geo.right / 2, 1),
-      GridDirection::PosX => (-1, geo.right / 2),
-      GridDirection::NegX => (1, geo.right / 2),
+    let (dx, dy) = match direction {
+      GridDirection::PosY => (size.right / 2, -1),
+      GridDirection::NegY => (size.right / 2, 1),
+      GridDirection::PosX => (-1, size.right / 2),
+      GridDirection::NegX => (1, size.right / 2),
     };
     commands.entity(entity).insert((
-      SlotOffset { dx, dz },
+      SlotOffset { dx, dz: dy },
       SlotPosition {
         x: parent_pos.x + dx,
-        z: parent_pos.z + dz,
+        y: parent_pos.y + dy,
       },
     ));
   }
@@ -186,7 +186,7 @@ pub fn insert_sit_offset(
       SlotOffset { dx: 0, dz: 0 },
       SlotPosition {
         x: parent_pos.x,
-        z: parent_pos.z,
+        y: parent_pos.y,
       },
     ));
   }
@@ -198,35 +198,30 @@ pub fn insert_sit_offset(
 pub fn insert_queue_offset(
   mut commands: Commands,
   slots: Query<(Entity, &QueueSlot, &ChildOf), (Added<QueueSlot>, Without<SlotOffset>)>,
-  parents: Query<(&GridPosition, &ApplianceGeometry)>,
+  parents: Query<(&GridPosition, &GridSize, &GridDirection)>,
 ) {
   for (entity, slot, parent_handle) in slots.iter() {
-    let Ok((parent_pos, geo)) = parents.get(parent_handle.parent()) else {
+    let Ok((parent_pos, size, direction)) = parents.get(parent_handle.parent()) else {
       continue;
     };
-    let (start_dx, start_dz) = match geo.direction {
-      GridDirection::PosZ => (geo.right / 2, 1),
-      GridDirection::NegZ => (geo.right / 2, -1),
-      GridDirection::PosX => (1, geo.right / 2),
-      GridDirection::NegX => (-1, geo.right / 2),
+    let (start_dx, start_dy) = match direction {
+      GridDirection::PosY => (size.right / 2, 1),
+      GridDirection::NegY => (size.right / 2, -1),
+      GridDirection::PosX => (1, size.right / 2),
+      GridDirection::NegX => (-1, size.right / 2),
     };
-    let (fdx, fdz) = match geo.direction {
-      GridDirection::PosZ => (0, 1),
-      GridDirection::NegZ => (0, -1),
-      GridDirection::PosX => (1, 0),
-      GridDirection::NegX => (-1, 0),
-    };
+    let (fdx, fdy) = direction.facing_offset();
     let start_x = parent_pos.x + start_dx;
-    let start_z = parent_pos.z + start_dz;
+    let start_y = parent_pos.y + start_dy;
     let idx = slot.index as i32;
     let px = start_x + fdx * idx;
-    let pz = start_z + fdz * idx;
+    let py = start_y + fdy * idx;
     commands.entity(entity).insert((
       SlotOffset {
         dx: px - parent_pos.x,
-        dz: pz - parent_pos.z,
+        dz: py - parent_pos.y,
       },
-      SlotPosition { x: px, z: pz },
+      SlotPosition { x: px, y: py },
     ));
   }
 }
@@ -238,35 +233,30 @@ pub fn insert_queue_offset(
 pub fn reindex_queue_slots(
   mut commands: Commands,
   slots: Query<(Entity, &QueueSlot, &ChildOf), Changed<QueueSlot>>,
-  parents: Query<(&GridPosition, &ApplianceGeometry)>,
+  parents: Query<(&GridPosition, &GridSize, &GridDirection)>,
 ) {
   for (entity, slot, parent_handle) in slots.iter() {
-    let Ok((parent_pos, geo)) = parents.get(parent_handle.parent()) else {
+    let Ok((parent_pos, size, direction)) = parents.get(parent_handle.parent()) else {
       continue;
     };
-    let (start_dx, start_dz) = match geo.direction {
-      GridDirection::PosZ => (geo.right / 2, 1),
-      GridDirection::NegZ => (geo.right / 2, -1),
-      GridDirection::PosX => (1, geo.right / 2),
-      GridDirection::NegX => (-1, geo.right / 2),
+    let (start_dx, start_dy) = match direction {
+      GridDirection::PosY => (size.right / 2, 1),
+      GridDirection::NegY => (size.right / 2, -1),
+      GridDirection::PosX => (1, size.right / 2),
+      GridDirection::NegX => (-1, size.right / 2),
     };
-    let (fdx, fdz) = match geo.direction {
-      GridDirection::PosZ => (0, 1),
-      GridDirection::NegZ => (0, -1),
-      GridDirection::PosX => (1, 0),
-      GridDirection::NegX => (-1, 0),
-    };
+    let (fdx, fdy) = direction.facing_offset();
     let start_x = parent_pos.x + start_dx;
-    let start_z = parent_pos.z + start_dz;
+    let start_y = parent_pos.y + start_dy;
     let idx = slot.index as i32;
     let px = start_x + fdx * idx;
-    let pz = start_z + fdz * idx;
+    let py = start_y + fdy * idx;
     commands.entity(entity).insert((
       SlotOffset {
         dx: px - parent_pos.x,
-        dz: pz - parent_pos.z,
+        dz: py - parent_pos.y,
       },
-      SlotPosition { x: px, z: pz },
+      SlotPosition { x: px, y: py },
     ));
   }
 }
@@ -277,7 +267,7 @@ pub fn spawn_exit_slot(mut commands: Commands) {
     ExitSlot,
     SlotPosition {
       x: EXIT_POSITION.0,
-      z: EXIT_POSITION.1,
+      y: EXIT_POSITION.1,
     },
   ));
 }

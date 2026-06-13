@@ -4,21 +4,26 @@ version = "0.1.0"
 authors = ["Zhuang Jiawei <zjw@stu.scau.edu.cn>"]
 edition = "2024"
 
-
-[workspace]
-resolver = "3"
-members = ["crates/bse_sim", "crates/bse_shell", "crates/bse_model"]
-
-[workspace.dependencies]
-bevy = { version = "0.18" }
-bse_sim = { path = "crates/bse_sim" }
-bse_shell = { path = "crates/bse_shell" }
-bse_model = { path = "crates/bse_model" }
-
 [features]
-dev = ["bse_shell/dev"]
+dev = ["dep:dot-vox"]
 
 [dependencies]
-bevy = { workspace = true }
-bse_sim = { workspace = true }
-bse_shell = { workspace = true }
+bevy = { version = "0.18" }
+bevy_egui = "0.39"
+bevy_enhanced_input = "0.25"
+bevy_asset = { version = "0.18" }
+bevy_image = { version = "0.18" }
+bevy_mesh = { version = "0.18" }
+bevy_pbr = { version = "0.18" }
+bevy_render = { version = "0.18" }
+pathfinding = "4.15"
+smallvec = "1.15"
+serde = { version = "1", features = ["derive"] }
+ron = "0.8"
+thiserror = "2"
+dot-vox = { version = "5", optional = true, package = "dot_vox" }
+
+[[bin]]
+name = "convert-vox"
+path = "src/bin/convert_vox.rs"
+required-features = ["dev"]

@@ -16,3 +16,10 @@ repos:
         language: system
         pass_filenames: false
         types: [rust]
+
+      - id: layer-rule
+        name: sim must not import from shell
+        entry: bash scripts/layer-rule.sh
+        language: system
+        pass_filenames: false
+        types: [rust]

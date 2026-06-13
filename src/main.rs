@@ -1,6 +1,5 @@
 use bevy::prelude::*;
-use bse_shell::ShellPlugin;
-use bse_sim::SimPlugin;
+use bite_sized_earth::{ShellPlugin, SimPlugin};
 
 fn main() {
   App::new()
